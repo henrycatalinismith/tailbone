@@ -7,6 +7,7 @@ actions = {}
 timeouts = {}
 intervals = {}
 eventloop = {}
+trick = 'none'
 
 sprites = {
   roll_1 = { 0, 0, 16, 16, 0, false },
@@ -39,7 +40,7 @@ sprites = {
 }
 
 function dispatch(action)
-  --printh('dispatch: ' .. action)
+  printh('dispatch: ' .. action)
   actions[action]()
 end
 
@@ -419,7 +420,7 @@ end
 function car:hitbox()
   return box:new(
     self.offset.x,
-    self.offset.y + 6,
+    self.offset.y + 7,
     self.size.x,
     self.size.y - 6
   )
@@ -500,25 +501,17 @@ end
 
 trex = {}
 
-function trex:reset()
-  self.alive = true
-  self.trick = 'push'
-  self.offset = point:new(10, 0)
-  self.vector = vector:new(1.5, 0)
-  self.size = vector:new(16, 16)
-end
-
 function trex:draw()
   if self.alive == false then
     sprite_name = 'dead_1'
-  elseif trick.name == 'none' then
+  elseif trick == 'none' then
     sprite_name = 'roll_1'
-  elseif trick.name == 'push' then
+  elseif trick == 'push' then
     sprite_n = loop(2^5, 5) + 1
     sprite_name = 'push_'..sprite_n
-  elseif trick.name == 'ollie' then
+  elseif trick == 'ollie' then
     sprite_name = 'ollie_1'
-  elseif trick.name == 'grab' then
+  elseif trick == 'grab' then
     sprite_name = 'grab_1'
   end
 
@@ -550,31 +543,6 @@ function trex:hitbox()
   )
 end
 
---------------------------------
--- trick -----------------------
-
-trick = {
-  name = 'push',
-  frame = 0,
-  frames = 6,
-}
-
-function trick:none()
-  self.name = 'none'
-  self.frame = 0
-  self.frames = 1
-end
-
-function trick:push()
-  self.name = 'push'
-  self.frame = 0
-  self.frames = 6
-end
-
-function trick:reset()
-  self.name = 'push'
-  self.frame = 0
-end
 
 --------------------------------
 -- gravity----------------------
@@ -596,7 +564,7 @@ function gravity:act()
       x = 0,
       y = gravity.strength,
     })
-  elseif trex.vector.y < 0.5 and trick.name == 'grab' then
+  elseif trex.vector.y < 0.5 and trick == 'grab' then
     --hang
     trex.vector = trex.vector + vector.new({
       x = 0,
@@ -667,10 +635,6 @@ function score:draw(n)
     screen.offset.y + 5,
     8
   )
-end
-
-function score:reset()
-  self.points = 0
 end
 
 --------------------------------
@@ -758,13 +722,19 @@ end
 
 
 function actions:reset()
-  trex:reset()
+  trex.alive = true
+  trex.trick = 'push'
+  trex.offset = point:new(10, 0)
+  trex.vector = vector:new(1.5, 0)
+  trex.size = vector:new(16, 16)
+
+  score.points = 0
+
   nearground:reset()
   cityscape:reset()
   foreground:reset()
   sky:reset()
-  trick:reset()
-  score:reset()
+  trick = 'push'
 
   game.mode = 'attract'
   game.paused = false
@@ -774,48 +744,46 @@ end
 function actions:play()
   game.mode = 'play'
   trex.offset.x = foreground.offset.x + trex.size.x
+  world.obstacles = {}
 end
 
 function actions:gameover()
   if game.paused == false and trex.alive == true then
     game.paused = true
     sfx(2)
-    trick:none()
+    trick = 'none'
     trex.alive = false
   end
 end
 
 function actions:ollie()
-  trick.name = 'ollie'
-  trick.frame = 0
-  trick.frames = 1
+  trick = 'ollie'
   trex.vector.y = -3
   sfx(0)
 end
 
 function actions:grab()
-  trick.name = 'grab'
-  trick.frame = 0
-  trick.frames = 1
+  trick = 'grab'
 end
 
 function actions:release()
-  trick.name = 'ollie'
+  trick = 'ollie'
 end
 
 function actions:land()
   if trex.alive then
     sfx(1)
-    trick:push()
+    trick = 'push'
   end
   trex.offset.y = 0
   trex.vector.y = 0
-  trick:reset()
 end
 
 function actions:cactus()
-  nextx = trex.offset.x + 120
-  add(world.obstacles, cactus:new(nextx))
+  if game.mode == 'play' and game.paused == false then
+    nextx = trex.offset.x + 120
+    add(world.obstacles, cactus:new(nextx))
+  end
 end
 
 function actions:overtake()
@@ -854,13 +822,13 @@ function input()
     if btn(5) then
       if trex.alive == false then
         after(2^4, 'reset')
-      elseif trick.name == 'push' then
+      elseif trick == 'push' then
         add(eventloop, 'ollie')
-      elseif trick.name == 'ollie' then
+      elseif trick == 'ollie' then
         add(eventloop, 'grab')
       end
     else
-      if trick.name == 'grab' then
+      if trick == 'grab' then
         add(eventloop, 'release')
       end
     end
