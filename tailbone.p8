@@ -2,12 +2,32 @@ pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
 
+mode = 'attract'
+score = 0
+paused = false
+
 frame = 0
-actions = {}
 timeouts = {}
 intervals = {}
 eventloop = {}
+
+trex = {}
+cacti = {}
+cars = {}
+
 trick = 'none'
+layers = {
+  'sky',
+  'cityscape',
+  'nearground',
+  'foreground',
+  'ui',
+}
+
+foreground = {}
+nearground = {}
+cityscape = {}
+sky = {}
 
 sprites = {
   roll_1 = { 0, 0, 16, 16, 0, false },
@@ -25,23 +45,297 @@ sprites = {
   dead_1 = { 48, 16, 16, 16, 0, false },
 
   cactus = { 0, 32, 8, 16, 0, false },
-  brush_1 = { 8, 32, 8, 8, 0, false },
-  brush_2 = { 16, 32, 8, 8, 0, false },
-  brush_3 = { 24, 32, 8, 8, 0, false },
-  brush_4 = { 32, 32, 8, 8, 0, false },
+  plant_1 = { 8, 32, 8, 8, 0, false },
+  plant_2 = { 16, 32, 8, 8, 0, false },
+  plant_3 = { 24, 32, 8, 8, 0, false },
+  plant_4 = { 32, 32, 8, 8, 0, false },
   car_right_1 = { 8, 40, 24, 12, 1, false },
   car_left_1 = { 8, 40, 24, 12, 1, true },
   cable_1 = { 32, 32, 32, 16, 0, false },
   tower_1 = { 64, 32, 16, 16, 0, false },
   tower_2 = { 80, 32, 16, 16, 0, false },
   tower_3 = { 96, 32, 16, 16, 0, false },
-  dirt = { 0, 53, 16, 17, 0, false },
+  road = { 0, 53, 16, 17, 0, false },
   logo = { 0, 64, 96, 32, 0 },
 }
 
+actions = {
+  cactus = function()
+    if mode == 'play' and paused == false then
+      nextx = trex.offset[1] + 120
+      add(cacti, {
+        offset = { nextx, 0 },
+        size = { 6, 16 },
+      })
+    end
+  end,
+
+  gameover = function()
+    if paused == false and trex.alive == true then
+      paused = true
+      sfx(2)
+      trick = 'none'
+      trex.alive = false
+    end
+  end,
+
+  grab = function()
+    trick = 'grab'
+  end,
+
+  land = function()
+    if trex.alive then
+      sfx(1)
+      trick = 'push'
+    end
+    trex.offset[2] = 0
+    trex.vector[2] = 0
+  end,
+
+  ollie = function()
+    trick = 'ollie'
+    trex.vector[2] = -3
+    sfx(0)
+  end,
+
+  overtake = function()
+    if mode == 'play' and paused == false then
+      x = trex.offset[1] - 64
+      s = trex.vector[1] * 1.7
+      add(cars, {
+        offset = { x, 6 },
+        size = { 32, 8 },
+        vector = { s, 0 },
+      })
+    end
+  end,
+
+  play = function()
+    mode = 'play'
+    trex.offset[1] = foreground.offset[1] + trex.size[1]
+    cacti = {}
+    cars = {}
+  end,
+
+  ram = function()
+    if mode == 'play' and paused == false then
+      x = trex.offset[1] + 128
+      s = trex.vector[1] * -1
+      add(cars, {
+        offset = { x, 4 },
+        size = { 32, 8 },
+        vector = { s, 0 },
+      })
+    end
+  end,
+
+  release = function()
+    trick = 'ollie'
+  end,
+
+  reset = function()
+    score = 0
+    trex.alive = true
+    trex.trick = 'push'
+    trex.offset = { 10, 0 }
+    trex.vector = { 1.5, 0 }
+    trex.size = { 16, 16 }
+    foreground.offset = { -10, -96 }
+    foreground.vector = { trex.vector[1], 0 }
+    nearground.offset = { -10, -92 }
+    nearground.vector = { 1, 0 }
+    cityscape.offset = { -10, -82 }
+    cityscape.vector = { 1, 0 }
+    sky.offset = { -10, -96 }
+    sky.vector = { 0.5, 0 }
+    trick = 'push'
+    mode = 'attract'
+    paused = false
+    cls()
+  end,
+
+}
+
+hitboxes = {
+  cactus = function(c)
+    return box:new(
+      c.offset[1],
+      c.offset[2],
+      c.size[1],
+      c.size[2]
+    )
+  end,
+
+  car = function(c)
+    return box:new(
+      c.offset[1],
+      c.offset[2] + 7,
+      c.size[1],
+      c.size[2] - 6
+    )
+  end,
+
+  trex = function()
+    return box:new(
+      trex.offset[1] + (trex.size[1] / 2),
+      trex.offset[2] + (trex.size[2] / 4),
+      trex.size[1] / 4,
+      trex.size[2] / 2
+    )
+  end,
+}
+
+render = {
+  ui = function()
+    camera(0, 0)
+
+    if mode == 'attract' then
+      draw('logo', { 16, 64 })
+    end
+
+    if paused == true then
+      rectfill(
+        54 - 10,
+        54 - 10,
+        54 + 33,
+        54 + 5,
+        0
+      )
+
+      print(
+        "game over",
+        54 - 5,
+        54 - 5,
+        7
+      )
+    end
+
+    if paused == true then
+      rectfill(
+        54 - 10,
+        64 - 10,
+        54 + 33,
+        64 + 5,
+        0
+      )
+      print(
+        ""..score,
+        54 - 5,
+        64 - 5,
+        6
+      )
+    end
+  end,
+
+  foreground = function()
+    x = flr(foreground.offset[1])
+    y = flr(foreground.offset[2])
+    camera(x, y)
+    width = 16
+    tiles = 128 / width
+
+    rectfill(x, 0, x + 128, 64, 4)
+
+    for i = (x - 15),(x + 128) do
+      if i % 16 == 0 then
+        draw('road', { i, 16 })
+      end
+    end
+
+    if mode == 'play' then
+      draw_trex()
+      th = hitboxes.trex()
+      rectfill(th.x, th.y, th.x + th.w, th.y + th.h, 8)
+    end
+
+    for cactus in all(cacti) do
+      draw('cactus', cactus.offset)
+    end
+
+    for car in all(cars) do
+      draw_car(car)
+
+      ch = hitboxes.car(car)
+      rectfill(ch.x, ch.y, ch.x + ch.w, ch.y + ch.h, 8)
+    end
+  end,
+
+  nearground = function()
+    x = ceil(nearground.offset[1])
+    y = ceil(nearground.offset[2])
+    camera(x, y)
+    rectfill(x, 0, x + 128, 3, 4)
+    for plant in all(plants(x)) do
+      draw(plant[1], { plant[2], 2 })
+    end
+  end,
+
+  cityscape = function()
+    x = ceil(cityscape.offset[1])
+    y = ceil(cityscape.offset[2])
+    camera(x, y)
+    rectfill(x, 9, x + 128, 9, 2)
+    for building in all(buildings(x)) do
+      draw(building[1], { building[2], 10 })
+    end
+  end,
+
+  sky = function()
+    x = ceil(sky.offset[1])
+    y = ceil(sky.offset[2])
+    camera(x, y)
+    rectfill(x, y, x + 128, 0, 1)
+    for star in all(stars(x)) do
+      circfill(star[1], star[2], 0, 6)
+    end
+  end,
+}
+
+function plants(x)
+  p = {}
+  for i = (x - 15),(x + 128) do
+    if i % 256 == 0 then
+      add(p, { 'plant_4', i })
+    elseif i % 128 == 0 then
+      add(p, { 'plant_3', i })
+    elseif i % 96 == 0 then
+      add(p, { 'plant_2', i })
+    elseif i % 64 == 0 then
+      add(p, { 'plant_1', i })
+    end
+  end
+  return p
+end
+
+function buildings(x)
+  b = {}
+  for i = (x - 15),(x + 128) do
+    if i % 98 == 0 then
+      add(b, { 'tower_1', i })
+    elseif i % 128 == 0 then
+      add(b, { 'tower_2', i })
+    end
+  end
+  return b
+end
+
+function stars(x)
+  s = {}
+  for i = (x - 15),(x + 128)do
+    if i % 4 < 1 then
+      add(s, {
+        i,
+        -10 - (i % 30) * 10,
+      })
+    end
+  end
+  return s
+end
+
 function dispatch(action)
-  printh('dispatch: ' .. action)
-  actions[action]()
+  if actions[action] ~= nil then
+    actions[action]()
+  end
 end
 
 function next(queue)
@@ -138,53 +432,13 @@ function draw(id, pos)
     sy,
     sw,
     sh,
-    flr(pos.x),
-    flr(pos.y) - sh,
+    flr(pos[1]),
+    flr(pos[2]) - sh,
     sw,
     sh,
     flip_x
   )
 end
---------------------------------
--- point -----------------------
-
-point = {}
-
-function point:new(x, y)
-  self.__index = self
-  return setmetatable({
-    x = x,
-    y = y,
-  }, self)
-end
-
-function point.__add(a, b)
-  return point:new(
-    a.x + b.x,
-    a.y + b.y
-  )
-end
-
---------------------------------
--- vector ----------------------
-
-vector = {}
-
-function vector:new(x, y)
-  self.__index = self
-  return setmetatable({
-    x = x,
-    y = y,
-  }, self)
-end
-
-function vector.__add(a, b)
-  return vector:new(
-    a.x + b.x,
-    a.y + b.y
-  )
-end
-
 
 --------------------------------
 -- box -------------------------
@@ -248,261 +502,19 @@ function box:intersects(b)
   return true
 end
 
---------------------------------
--- foreground ------------------
 
-foreground = {}
-
-function foreground:reset()
-  self.offset = point:new(-10, -96)
-  self.vector = vector:new(trex.vector.x, 0)
-end
-
-function foreground:move()
-  self.offset = self.offset + self.vector
-end
-
-function foreground:stop()
-  self.vector.x = 0
-end
-
-function foreground:draw()
-  camera(self.offset.x, self.offset.y)
-  land:draw(flr(self.offset.x))
-  if game.mode == 'play' then
-    trex:draw()
-  end
-  for obstacle in all(world.obstacles) do
-    obstacle:draw()
-  end
-end
-
---------------------------------
--- nearground ------------------
-
-nearground = {}
-
-function nearground:reset()
-  self.offset = point:new(-10, -92)
-  self.vector = vector:new(1, 0)
-end
-
-function nearground:move()
-  self.offset = self.offset + self.vector
-end
-
-function nearground:stop()
-  self.vector.x = 0
-end
-
-function nearground:draw()
-  camera(self.offset.x, self.offset.y)
-
-  rectfill(
-    self.offset.x, 0,
-    self.offset.x + 128, 3,
-    4
-  )
-
-  begin = self.offset.x - 15
-  finish = self.offset.x + 128
-  for i = begin,finish do
-    offset = box:new(i, 2, 16, 16)
-    if i % 256 == 0 then
-      draw('brush_4', offset)
-    elseif i % 128 == 0 then
-      draw('brush_3', offset)
-    elseif i % 96 == 0 then
-      draw('brush_2', offset)
-    elseif i % 64 == 0 then
-      draw('brush_1', offset)
-    end
-  end
-end
-
---------------------------------
--- cityscape -------------------
-
-cityscape = {}
-
-function cityscape:reset()
-  self.offset = point:new(-10, -82)
-  self.vector = vector:new(1, 0)
-end
-
-function cityscape:move()
-  self.offset = self.offset + self.vector
-end
-
-function cityscape:stop()
-  self.vector.x = 0
-end
-
-function cityscape:draw()
-  self.offset.x = ceil(self.offset.x)
-  camera(self.offset.x, self.offset.y)
-
-  rectfill(
-    self.offset.x, 9,
-    self.offset.x + 128, 9,
-    2
-  )
-
-  begin = self.offset.x - 15
-  finish = self.offset.x + 128
-  for i = begin,finish do
-    if i % 98 == 0 then
-      offset = box:new(i, 10, 16, 16)
-      draw('tower_1', offset)
-    elseif i % 128 == 0 then
-      offset = box:new(i, 10, 16, 16)
-      draw('tower_2', offset)
-    --elseif (i + 16) % 32 == 0 then
-      --offset = box:new(i, 10, 16, 16)
-      --draw('tower_3', offset)
-    end
-  end
-end
-
---------------------------------
--- car -------------------------
-
-car = {}
-
-function car:chase()
-  self.__index = self
-  props = {
-    offset = point:new(trex.offset.x - 64, 6),
-    size = vector:new(32, 8),
-    vector = vector:new(trex.vector.x * 1.7, 0),
-  }
-  return setmetatable(
-    props,
-    self
-  )
-end
-
-function car:ram()
-  self.__index = self
-  props = {
-    offset = point:new(trex.offset.x + 128, 4),
-    size = vector:new(32, 8),
-    vector = vector:new(0 - (trex.vector.x * 1.3), 0),
-  }
-  return setmetatable(
-    props,
-    self
-  )
-end
-
-function car:move()
-  self.offset = self.offset + self.vector
-end
-
-function car:draw()
-  if self.vector.x > 0 then
+function draw_car(car)
+  if car.vector[1] > 0 then
     direction = 'right'
   else
     direction = 'left'
   end
   sprite_id = 'car_' .. direction .. '_1'
-
-  offset = box:new(
-    self.offset.x,
-    self.offset.y,
-    self.size.x,
-    self.size.y
-  )
-
-  draw(sprite_id, offset)
+  draw(sprite_id, car.offset)
 end
 
-function car:hitbox()
-  return box:new(
-    self.offset.x,
-    self.offset.y + 7,
-    self.size.x,
-    self.size.y - 6
-  )
-end
-
---------------------------------
--- sky -------------------------
-
-sky = {}
-
-function sky:reset()
-  self.offset = point:new(-10, -96)
-  self.vector = vector:new(0.5, 0)
-end
-
-function sky:move()
-  self.offset = self.offset + self.vector
-end
-
-function sky:stop()
-  self.vector.x = 0
-end
-
-function sky:draw()
-  camera(self.offset.x, self.offset.y)
-
-  rectfill(
-    self.offset.x, self.offset.y,
-    self.offset.x + 128, 0,
-    1
-  )
-
-  for i = flr(self.offset.x),flr(self.offset.x) + 128 do
-    if i % 4 < 1 then
-      x1 = i
-      x2 = x1 + 0
-      y1 = -10 - (i % 30) * 10
-      y2 = y1 + 0
-      circfill(
-        x1, y1,
-        0,
-        6
-      )
-    end
-  end
-end
-
---------------------------------
--- land ------------------------
-
-land = {
-  color = 4,
-  x = 0,
-}
-
-function land:draw(x)
-  width = 16
-  tiles = 128 / width
-
-  rectfill(
-    x, 0,
-    x + 128, 64,
-    4
-  )
-
-  begin = x - 15
-  finish = x + 128
-  for i = begin,finish do
-    if i % 16 == 0 then
-      offset = box:new(i, 16, 16, 16)
-      draw('dirt', offset)
-    end
-  end
-end
-
---------------------------------
--- trex ------------------------
-
-trex = {}
-
-function trex:draw()
-  if self.alive == false then
+function draw_trex()
+  if trex.alive == false then
     sprite_name = 'dead_1'
   elseif trick == 'none' then
     sprite_name = 'roll_1'
@@ -515,307 +527,38 @@ function trex:draw()
     sprite_name = 'grab_1'
   end
 
-  draw(sprite_name, self.offset)
+  draw(sprite_name, {
+    ceil(trex.offset[1]),
+    trex.offset[2],
+  })
 end
 
 function trex:move()
   if self.alive == false then
     decel = 0.1
-    if self.vector.x - decel < 0 then
-      self.vector.x = 0
+    if self.vector[1] - decel < 0 then
+      self.vector[1] = 0
     else
-      self.vector.x = self.vector.x - decel
+      self.vector[1] = self.vector[1] - decel
     end
   end
-  self.offset = self.offset + self.vector
-  if self.alive and self.offset.y > 0 then
+  self.offset[1] = self.offset[1] + self.vector[1]
+  self.offset[2] = self.offset[2] + self.vector[2]
+  if self.alive and self.offset[2] > 0 then
     add(eventloop, 'land')
   end
 end
 
-
-function trex:hitbox()
-  return box:new(
-    self.offset.x + (self.size.x / 2),
-    self.offset.y + (self.size.y / 4),
-    self.size.x / 4,
-    self.size.y / 2
-  )
-end
-
-
---------------------------------
--- gravity----------------------
-
-gravity = {
-  strength = 0.25,
-}
-
-function gravity:act()
-  if trex.offset.y >= 0 then
-    return
-  end
-
-  air = abs(trex.offset.y) / 44
-
-  if trex.vector.y < 0 then
-    --pop
-    trex.vector = trex.vector + vector.new({
-      x = 0,
-      y = gravity.strength,
-    })
-  elseif trex.vector.y < 0.5 and trick == 'grab' then
-    --hang
-    trex.vector = trex.vector + vector.new({
-      x = 0,
-      y = gravity.strength * 0.1
-    })
-  else
-    --drop
-    trex.vector = trex.vector + vector.new({
-      x = 0,
-      y = gravity.strength * air,
-    })
-  end
-
-end
-
---------------------------------
--- cactus ----------------------
-
-cactus = {
-  offset = point:new(0, 0),
-  size = vector:new(0, 0),
-}
-
-function cactus:new(x)
-  self.__index = self
-  props = {
-    offset = point:new(x, 0),
-    size = vector:new(6, 16),
-  }
-  return setmetatable(
-    props,
-    self
-  )
-end
-
-function cactus:move()
-  -- no lol
-end
-
-function cactus:draw()
-  draw('cactus', self.offset)
-end
-
-function cactus:hitbox()
-  return box:new(
-    self.offset.x,
-    self.offset.y,
-    self.size.x,
-    self.size.y
-  )
-end
-
---------------------------------
--- score ----------------------
-
-score = {
-  points = 0,
-}
-
-function score:increase(n)
-  self.points = self.points + n
-end
-
-function score:draw(n)
-  print(
-    ""..self.points,
-    screen.offset.x + 105,
-    screen.offset.y + 5,
-    8
-  )
-end
-
---------------------------------
--- ui --------------------------
-
-ui = {
-}
-
-logo_offset = point:new(16, 64)
-
-function ui:draw()
-  camera(0, 0)
-
-  if game.mode == 'attract' then
-    draw('logo', logo_offset)
-  end
-
-  if game.paused == true then
-    rectfill(
-      54 - 10,
-      54 - 10,
-      54 + 33,
-      54 + 5,
-      0
-    )
-
-    print(
-      "game over",
-      54 - 5,
-      54 - 5,
-      7
-    )
-  end
-
-  if game.paused == true then
-    rectfill(
-      54 - 10,
-      64 - 10,
-      54 + 33,
-      64 + 5,
-      0
-    )
-    print(
-      ""..score.points,
-      54 - 5,
-      64 - 5,
-      6
-    )
-  end
-end
-
---------------------------------
--- world -----------------------
-
-world = {
-  obstacles = {}
-}
-
-function world:update()
-  gravity:act()
-
-  trex:move()
-  if trex.alive == false then
-    return true
-  end
-
-  for obstacle in all(self.obstacles) do
-    obstacle:move()
-
-    t = trex:hitbox()
-    o = obstacle:hitbox()
-    if t:intersects(o) and t:above(o) == false then
-      add(eventloop, 'gameover')
-    end
-
-    if trex.offset.x == obstacle.offset.x then
-      score:increase(10)
-    end
-  end
-
-end
-
---------------------------------
--- actions ---------------------
-
-
-function actions:reset()
-  trex.alive = true
-  trex.trick = 'push'
-  trex.offset = point:new(10, 0)
-  trex.vector = vector:new(1.5, 0)
-  trex.size = vector:new(16, 16)
-
-  score.points = 0
-
-  nearground:reset()
-  cityscape:reset()
-  foreground:reset()
-  sky:reset()
-  trick = 'push'
-
-  game.mode = 'attract'
-  game.paused = false
-  cls()
-end
-
-function actions:play()
-  game.mode = 'play'
-  trex.offset.x = foreground.offset.x + trex.size.x
-  world.obstacles = {}
-end
-
-function actions:gameover()
-  if game.paused == false and trex.alive == true then
-    game.paused = true
-    sfx(2)
-    trick = 'none'
-    trex.alive = false
-  end
-end
-
-function actions:ollie()
-  trick = 'ollie'
-  trex.vector.y = -3
-  sfx(0)
-end
-
-function actions:grab()
-  trick = 'grab'
-end
-
-function actions:release()
-  trick = 'ollie'
-end
-
-function actions:land()
-  if trex.alive then
-    sfx(1)
-    trick = 'push'
-  end
-  trex.offset.y = 0
-  trex.vector.y = 0
-end
-
-function actions:cactus()
-  if game.mode == 'play' and game.paused == false then
-    nextx = trex.offset.x + 120
-    add(world.obstacles, cactus:new(nextx))
-  end
-end
-
-function actions:overtake()
-  if game.mode == 'play' and game.paused == false then
-    add(world.obstacles, car:chase())
-  end
-end
-
-function actions:ram()
-  if game.mode == 'play' and game.paused == false then
-    add(world.obstacles, car:ram())
-  end
-end
-
---------------------------------
--- game ------------------------
-
-game = {
-  mode = 'attract',
-  paused = false,
-}
-
 function input()
-  if game.mode == 'attract' then
+  if mode == 'attract' then
 
     if btn(5) then
       after(2^4, 'play')
     end
 
-  elseif game.mode == 'play' then
+  elseif mode == 'play' then
 
-    if trex.offset.y > 0 then
+    if trex.offset[2] > 0 then
       return true
     end
 
@@ -836,6 +579,70 @@ function input()
   end
 end
 
+function gravity()
+  if trex.offset[2] >= 0 then
+    return
+  end
+
+  air = abs(trex.offset[2]) / 44
+
+  if trex.vector[2] < 0 then
+    --pop
+    trex.vector[2] = trex.vector[2] + 0.25
+  elseif trex.vector[2] < 0.5 and trick == 'grab' then
+    --hang
+    trex.vector[2] = trex.vector[2] + 0.25 * 0.1
+  else
+    --drop
+    trex.vector[2] = trex.vector[2] + 0.25 * air
+  end
+end
+
+function physics()
+  gravity()
+
+  sky.offset[1] = (
+      sky.offset[1]
+    + sky.vector[1]
+  )
+  cityscape.offset[1] = (
+      cityscape.offset[1]
+    + cityscape.vector[1]
+  )
+  nearground.offset[1] = (
+      nearground.offset[1]
+    + nearground.vector[1]
+  )
+  foreground.offset[1] = (
+      foreground.offset[1]
+    + foreground.vector[1]
+  )
+
+  if mode == 'play' and paused == false then
+    t = hitboxes.trex()
+    for cactus in all(cacti) do
+      hb = hitboxes.cactus(cactus)
+      if t:intersects(hb) then
+        add(eventloop, 'gameover')
+      end
+    end
+
+    for car in all(cars) do
+      car.offset[1] = car.offset[1] + car.vector[1]
+      car.offset[2] = car.offset[2] + car.vector[2]
+
+      o = hitboxes.car(car)
+      if t:intersects(o) and t:above(o) == false then
+        add(eventloop, 'gameover')
+      end
+
+      if trex.offset[1] == car.offset[1] then
+        score = score + 10
+      end
+    end
+  end
+end
+
 function _init()
   dispatch('reset')
   every(2^8, 'ram')
@@ -846,31 +653,18 @@ end
 function _update60()
   tick()
   input()
+  physics()
+  dispatch(next(eventloop))
 
-  action = next(eventloop)
-  if action then
-    dispatch(action)
+  if mode == 'play' and paused == false then
+    trex:move()
   end
-
-  if game.paused == false then
-    sky:move()
-    nearground:move()
-    cityscape:move()
-    foreground:move()
-
-    if game.mode == 'play' then
-      world:update()
-    end
-  end
-
 end
 
 function _draw()
-  sky:draw()
-  cityscape:draw()
-  nearground:draw()
-  foreground:draw()
-  ui:draw()
+  for layer in all(layers) do
+    render[layer]()
+  end
 end
 
 __gfx__
