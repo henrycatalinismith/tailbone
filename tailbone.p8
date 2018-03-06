@@ -10,6 +10,7 @@ frame = 0
 timeouts = {}
 intervals = {}
 eventloop = {}
+script = {}
 
 trex = {}
 cacti = {}
@@ -67,6 +68,22 @@ actions = {
         offset = { nextx, 0 },
         size = { 6, 16 },
       })
+      after(2^7, 'next')
+    end
+  end,
+
+  gc = function()
+    for i,cactus in pairs(cacti) do
+      if cactus.offset[1] < foreground.offset[1] then
+        del(cacti, i)
+      end
+    end
+
+    for i,car in pairs(cars) do
+      d = foreground.offset[1] + 64 - car.offset[1]
+      if d > 256 then
+        del(cars, i)
+      end
     end
   end,
 
@@ -92,6 +109,19 @@ actions = {
     trex.vector[2] = 0
   end,
 
+  next = function()
+    action = script[1]
+    del(script, action)
+    add(eventloop, action)
+
+    if flr(rnd(2)) == 1 then
+      add(script, 'cactus')
+    else
+      add(script, 'overtake')
+      add(script, 'ram')
+    end
+  end,
+
   ollie = function()
     trick = 'ollie'
     trex.vector[2] = -3
@@ -107,14 +137,22 @@ actions = {
         size = { 32, 8 },
         vector = { s, 0 },
       })
+      after(2^8, 'next')
     end
   end,
 
   play = function()
+    if mode == 'play' then
+      return true
+    end
+
+    printh('play!!')
     mode = 'play'
     trex.offset[1] = foreground.offset[1] + trex.size[1]
     cacti = {}
     cars = {}
+    add(script, 'cactus')
+    add(eventloop, 'next')
   end,
 
   ram = function()
@@ -126,6 +164,7 @@ actions = {
         size = { 32, 8 },
         vector = { s, 0 },
       })
+      after(2^6, 'next')
     end
   end,
 
@@ -135,6 +174,11 @@ actions = {
 
   reset = function()
     score = 0
+    trick = 'push'
+    mode = 'attract'
+    paused = false
+    cars = {}
+    cacti = {}
     trex.alive = true
     trex.trick = 'push'
     trex.offset = { 10, 0 }
@@ -148,9 +192,6 @@ actions = {
     cityscape.vector = { 1, 0 }
     sky.offset = { -10, -96 }
     sky.vector = { 0.5, 0 }
-    trick = 'push'
-    mode = 'attract'
-    paused = false
     cls()
   end,
 
@@ -158,32 +199,39 @@ actions = {
 
 hitboxes = {
   cactus = function(c)
-    return box:new(
-      c.offset[1],
-      c.offset[2],
-      c.size[1],
-      c.size[2]
-    )
+    return {
+      offset = c.offset,
+      size = c.size,
+    }
   end,
 
   car = function(c)
-    return box:new(
-      c.offset[1],
-      c.offset[2] + 7,
-      c.size[1],
-      c.size[2] - 6
-    )
+    return {
+      offset = {
+        c.offset[1],
+        c.offset[2] + 7,
+      },
+      size = {
+        c.size[1],
+        c.size[2] - 6,
+      },
+    }
   end,
 
   trex = function()
-    return box:new(
-      trex.offset[1] + (trex.size[1] / 2),
-      trex.offset[2] + (trex.size[2] / 4),
-      trex.size[1] / 4,
-      trex.size[2] / 2
-    )
+    return {
+      offset = {
+        trex.offset[1],
+        trex.offset[2],
+      },
+      size = {
+        trex.size[1],
+        trex.size[2],
+      },
+    }
   end,
 }
+
 
 render = {
   ui = function()
@@ -243,20 +291,39 @@ render = {
     end
 
     if mode == 'play' then
+      h = hitboxes.trex()
+      rectfill(
+        h.offset[1],
+        h.offset[2],
+        h.offset[1] + h.size[1],
+        h.offset[2] - h.size[2],
+        14
+      )
       draw_trex()
-      th = hitboxes.trex()
-      rectfill(th.x, th.y, th.x + th.w, th.y + th.h, 8)
     end
 
     for cactus in all(cacti) do
+      h = hitboxes.cactus(cactus)
+      rectfill(
+        h.offset[1],
+        h.offset[2],
+        h.offset[1] + h.size[1],
+        h.offset[2] - h.size[2],
+        14
+      )
       draw('cactus', cactus.offset)
     end
 
     for car in all(cars) do
+      h = hitboxes.car(car)
+      rectfill(
+        h.offset[1],
+        h.offset[2],
+        h.offset[1] + h.size[1],
+        h.offset[2] - h.size[2],
+        14
+      )
       draw_car(car)
-
-      ch = hitboxes.car(car)
-      rectfill(ch.x, ch.y, ch.x + ch.w, ch.y + ch.h, 8)
     end
   end,
 
@@ -334,6 +401,7 @@ end
 
 function dispatch(action)
   if actions[action] ~= nil then
+    printh(action)
     actions[action]()
   end
 end
@@ -440,68 +508,30 @@ function draw(id, pos)
   )
 end
 
---------------------------------
--- box -------------------------
-
-box = {}
-
-function box:new(x, y, w, h)
-  self.__index = self
-  return setmetatable({
-    x = x,
-    y = y,
-    w = w,
-    h = h,
-  }, self)
-end
-
-function box:p1()
-  return {
-    x = self.x,
-    y = self.y
-  }
-end
-
-function box:p2()
-  return {
-    x = self.x + self.w,
-    y = self.y + self.h
-  }
-end
-
-function box:over(b)
-  return self.y <= b.y - self.h
-     and self.x == b.x
-end
-
-function box:above(b)
-  return self.y <= b.y - self.h
-end
-
-function box:intersects(b)
-   -- left
-  if self.x <= b.x - self.w then
+function intersect(b1, b2)
+  --printh(b2.offset[1] ..'x'.. b2.offset[2])
+  -- left
+  if b1.offset[1] <= b2.offset[1] - b1.size[1] then
     return false
   end
 
   -- right
-  if self.x >= b.x + b.w then
+  if b1.offset[1] >= b2.offset[1] + b2.size[1] then
     return false
   end
 
   -- above
-  if self.y <= b.y - self.h then
+  if b1.offset[2] <= b2.offset[2] - b1.size[2] then
     return false
   end
 
   -- below
-  if self.y >= b.y + b.h then
+  if b1.offset[2] >= b2.offset[2] - b2.size[2] then
     return false
   end
 
   return true
 end
-
 
 function draw_car(car)
   if car.vector[1] > 0 then
@@ -621,8 +651,8 @@ function physics()
   if mode == 'play' and paused == false then
     t = hitboxes.trex()
     for cactus in all(cacti) do
-      hb = hitboxes.cactus(cactus)
-      if t:intersects(hb) then
+      c = hitboxes.cactus(cactus)
+      if intersect(t, c) then
         add(eventloop, 'gameover')
       end
     end
@@ -632,9 +662,9 @@ function physics()
       car.offset[2] = car.offset[2] + car.vector[2]
 
       o = hitboxes.car(car)
-      if t:intersects(o) and t:above(o) == false then
-        add(eventloop, 'gameover')
-      end
+      --if t:intersects(o) then
+        --add(eventloop, 'gameover')
+      --end
 
       if trex.offset[1] == car.offset[1] then
         score = score + 10
@@ -645,9 +675,7 @@ end
 
 function _init()
   dispatch('reset')
-  every(2^8, 'ram')
-  every(2^7, 'overtake')
-  every(2^7, 'cactus')
+  every(2^6, 'gc')
 end
 
 function _update60()
