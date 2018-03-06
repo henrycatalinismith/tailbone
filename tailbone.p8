@@ -412,40 +412,20 @@ function next(queue)
   return v
 end
 
-function bind(t, k)
-  return function(...)
-    return t[k](t, ...)
-  end
-end
-
-function pop(stack)
-  local v = stack[#stack]
-  stack[#stack]=nil
-  return v
-end
-
-function shift(queue)
-  local v = queue[1]
-  del(queue, v)
-  return v
-end
-
 function tick()
   frame = frame + 1
 
   for timeout in all(timeouts) do
-    if frame == timeout.count then
-      if timeout.action ~= nil then
-        add(eventloop, timeout.action)
-      end
+    if frame == timeout[1] then
+      add(eventloop, timeout[2])
       del(timeouts, timeout)
     end
   end
 
   for interval in all(intervals) do
-    if frame % interval.interval == 0 then
-      if interval.action ~= nil then
-        add(eventloop, interval.action)
+    if frame % interval[1] == 0 then
+      if interval[2] ~= nil then
+        add(eventloop, interval[2])
       end
     end
   end
@@ -464,17 +444,11 @@ function loop(interval, limit)
 end
 
 function after(frames, action)
-  add(timeouts, {
-    count = frame + frames,
-    action = action,
-  })
+  add(timeouts, { frame + frames, action })
 end
 
 function every(interval, action)
-  add(intervals, {
-    interval = interval,
-    action = action,
-  })
+  add(intervals, { interval, action })
 end
 
 function draw(id, pos)
