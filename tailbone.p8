@@ -134,7 +134,7 @@ actions = {
       s = trex.vector[1] * 1.7
       add(cars, {
         offset = { x, 6 },
-        size = { 32, 8 },
+        size = { 21, 8 },
         vector = { s, 0 },
       })
       after(2^8, 'next')
@@ -160,8 +160,8 @@ actions = {
       x = trex.offset[1] + 128
       s = trex.vector[1] * -1
       add(cars, {
-        offset = { x, 4 },
-        size = { 32, 8 },
+        offset = { x, 3 },
+        size = { 21, 8 },
         vector = { s, 0 },
       })
       after(2^6, 'next')
@@ -200,20 +200,26 @@ actions = {
 hitboxes = {
   cactus = function(c)
     return {
-      offset = c.offset,
-      size = c.size,
+      offset = {
+        c.offset[1] + 2,
+        c.offset[2] - c.size[2],
+      },
+      size = {
+        c.size[1] - 4,
+        c.size[2],
+      }
     }
   end,
 
   car = function(c)
     return {
       offset = {
-        c.offset[1],
-        c.offset[2] + 7,
+        c.offset[1] + 1,
+        c.offset[2] - c.size[2] + 2,
       },
       size = {
         c.size[1],
-        c.size[2] - 6,
+        c.size[2] - 3,
       },
     }
   end,
@@ -221,13 +227,10 @@ hitboxes = {
   trex = function()
     return {
       offset = {
-        trex.offset[1],
-        trex.offset[2],
+        trex.offset[1] + 2,
+        trex.offset[2] - trex.size[2] + 8,
       },
-      size = {
-        trex.size[1],
-        trex.size[2],
-      },
+      size = { 8, 6 }
     }
   end,
 }
@@ -291,38 +294,38 @@ render = {
     end
 
     if mode == 'play' then
-      h = hitboxes.trex()
-      rectfill(
-        h.offset[1],
-        h.offset[2],
-        h.offset[1] + h.size[1],
-        h.offset[2] - h.size[2],
-        14
-      )
+      --h = hitboxes.trex()
+      --rectfill(
+        --h.offset[1],
+        --h.offset[2],
+        --h.offset[1] + h.size[1],
+        --h.offset[2] + h.size[2],
+        --14
+      --)
       draw_trex()
     end
 
     for cactus in all(cacti) do
-      h = hitboxes.cactus(cactus)
-      rectfill(
-        h.offset[1],
-        h.offset[2],
-        h.offset[1] + h.size[1],
-        h.offset[2] - h.size[2],
-        14
-      )
+      --h = hitboxes.cactus(cactus)
+      --rectfill(
+        --h.offset[1],
+        --h.offset[2],
+        --h.offset[1] + h.size[1],
+        --h.offset[2] + h.size[2],
+        --14
+      --)
       draw('cactus', cactus.offset)
     end
 
     for car in all(cars) do
-      h = hitboxes.car(car)
-      rectfill(
-        h.offset[1],
-        h.offset[2],
-        h.offset[1] + h.size[1],
-        h.offset[2] - h.size[2],
-        14
-      )
+      --h = hitboxes.car(car)
+      --rectfill(
+        --h.offset[1],
+        --h.offset[2],
+        --h.offset[1] + h.size[1],
+        --h.offset[2] + h.size[2],
+        --14
+      --)
       draw_car(car)
     end
   end,
@@ -482,29 +485,61 @@ function draw(id, pos)
   )
 end
 
-function intersect(b1, b2)
-  --printh(b2.offset[1] ..'x'.. b2.offset[2])
-  -- left
-  if b1.offset[1] <= b2.offset[1] - b1.size[1] then
+function intersect(a, b)
+
+  ax1 = a.offset[1]
+  ax2 = a.offset[1] + a.size[1]
+  ay1 = a.offset[2]
+  ay2 = a.offset[2] + a.size[2]
+
+  bx1 = b.offset[1]
+  bx2 = b.offset[1] + b.size[1]
+  by1 = b.offset[2]
+  by2 = b.offset[2] + b.size[2]
+
+  --left
+  if ax2 < bx1 then
     return false
   end
 
-  -- right
-  if b1.offset[1] >= b2.offset[1] + b2.size[1] then
+  --right
+  if ax1 > bx2 then
     return false
   end
 
-  -- above
-  if b1.offset[2] <= b2.offset[2] - b1.size[2] then
+  --above
+  if ay2 < by1 then
     return false
   end
 
-  -- below
-  if b1.offset[2] >= b2.offset[2] - b2.size[2] then
+  --below
+  if ay1 > by2 then
     return false
   end
 
   return true
+  --printh(b2.offset[1] ..'x'.. b2.offset[2])
+  -- left
+  --if b1.offset[1] <= b2.offset[1] - b1.size[1] then
+    --return false
+  --end
+
+  -- right
+  --if b1.offset[1] >= b2.offset[1] + b2.size[1] then
+    --return false
+  --end
+
+  -- above
+  --if b1.offset[2] <= b2.offset[2] - b1.size[2] then
+    --return false
+  --end
+
+  -- below
+  --if b1.offset[2] >= b2.offset[2] - b2.size[2] then
+    --return false
+  --end
+
+  --return true
 end
 
 function draw_car(car)
@@ -635,10 +670,10 @@ function physics()
       car.offset[1] = car.offset[1] + car.vector[1]
       car.offset[2] = car.offset[2] + car.vector[2]
 
-      o = hitboxes.car(car)
-      --if t:intersects(o) then
-        --add(eventloop, 'gameover')
-      --end
+      c = hitboxes.car(car)
+      if intersect(t, c) then
+        add(eventloop, 'gameover')
+      end
 
       if trex.offset[1] == car.offset[1] then
         score = score + 10
