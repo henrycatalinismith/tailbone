@@ -16,9 +16,10 @@ trex = {}
 ollie_cooloff = false
 can_pop = true
 can_charge = true
-min_charge = 16
+min_charge = 2
 max_charge = 32
 overtaking = false
+cue_jump = false
 
 shake_frames = 0
 
@@ -118,6 +119,13 @@ actions = {
     trick = 'charge'
     charge = 0
     trex.vector[2] = trex.vector[2] / 2
+
+    trex.vector[1] = 2.5
+    foreground.vector[1] = 2.5
+    nearground.vector[1] = nearground.vector[1] + 0.5
+    cityscape.vector[1] = cityscape.vector[1] + 0.5
+    sky.vector[1] = sky.vector[1] + 0.5
+
     --sfx(3)
     --after(2^6, 'charge_limit')
     can_charge = false
@@ -200,7 +208,20 @@ actions = {
       end
       trick = 'push'
     end
-    ollie_cooloff = true
+    --ollie_cooloff = true
+    trex.vector[1] = 1.5
+    foreground.vector[1] = 1.5
+    foreground.offset[1] = trex.offset[1] - 16
+
+    nearground.vector[1] = nearground.vector[1] - 1
+    cityscape.vector[1] = cityscape.vector[1] - 1
+    sky.vector[1] = sky.vector[1] - 0.5
+
+    foreground.vector[1] = trex.vector[1]
+    nearground.vector[1] = 1
+    cityscape.vector[1] = 1
+    sky.vector[1] = 0.5
+
     trex.offset[2] = 0
     trex.vector[2] = 0
     after(cooloff_time, 'cooloff')
@@ -214,17 +235,19 @@ actions = {
     if flr(rnd(2)) == 1 then
       add(script, 'cactus')
     else
-      add(script, 'start_overtake')
-      add(script, 'start_ram')
+      add(script, 'cactus')
+      --add(script, 'start_ram')
     end
   end,
 
   pop = function()
-    if ollie_cooloff or can_pop == false then
+    --if ollie_cooloff or can_pop == false then
+    if can_pop == false then
       return
     end
     trick = 'pop'
     trex.vector[2] = -3.2
+
     sfx(0)
     can_pop = false
   end,
@@ -237,14 +260,14 @@ actions = {
     if mode == 'play' and paused == false then
       overtaking = true
       x = trex.offset[1] - 64
-      s = trex.vector[1] * 1.7
+      s = 2.0
       add(cars, {
         offset = { x, 6 },
         size = { 21, 8 },
         vector = { s, 0 },
       })
-      after(2^8, 'next')
-      after(2^7 + 2^6, 'end_overtake')
+      after(2^5, 'next')
+      --after(2^7 + 2^6, 'end_overtake')
       sfx(9, 2)
     end
   end,
@@ -264,6 +287,7 @@ actions = {
     trex.offset[1] = foreground.offset[1] + trex.size[1]
 
     --add(script, 'start_ram')
+    add(script, 'start_overtake')
     add(script, 'cactus')
     add(eventloop, 'next')
   end,
@@ -271,7 +295,7 @@ actions = {
   start_ram = function()
     if mode == 'play' and paused == false then
       x = trex.offset[1] + 128
-      s = trex.vector[1] * -1
+      s = -1
       sfx(11, 3)
       add(cars, {
         offset = { x, 0 },
@@ -812,7 +836,7 @@ function input()
         can_charge = true
       elseif trick == 'ollie' then
         actions.release()
-      elseif trick == 'charge' and charge > min_charge then
+      elseif trick == 'charge' then --and charge > min_charge then
         actions.grab()
       elseif trick == 'grab' then
         can_charge = true
