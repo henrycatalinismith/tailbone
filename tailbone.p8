@@ -255,7 +255,7 @@ actions = {
     trick = 'air'
     trex.offset[2] = (
       cacti[1].offset[2] -
-      cacti[1].size[2]
+      cacti[1].size[2] - 4
     )
     parallax(1)
     cactus.alive = false
@@ -309,7 +309,7 @@ actions = {
   grab = function()
     sfx(8)
     trick = 'grab'
-    trex.vector[2] = charge / 4
+    trex.vector[2] = 7
   end,
 
   grind = function()
@@ -359,6 +359,8 @@ actions = {
     end
 
     if #poles > 0 then
+      poles = nil
+      poles = {}
       after(2^4, 'next')
       return
     end
@@ -477,9 +479,24 @@ actions = {
       del(poles, poles[k])
     end
 
+    timeouts = nil
+    timeouts = {}
+
+    intervals = nil
+    intervals = {}
+
+    cars = nil
     cars = {}
+
+    cacti = nil
     cacti = {}
+
+    poles = nil
     poles = {}
+
+    script = nil
+    script = {}
+
     groundlevel = 0
     trex.alive = true
     trex.trick = 'push'
@@ -1010,7 +1027,7 @@ function gravity()
     --drop
     trex.vector[2] = min(
       trex.vector[2] + 0.95 * air,
-      3
+      5
     )
   end
 end
