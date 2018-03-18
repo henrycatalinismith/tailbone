@@ -1,6 +1,97 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
+--------------------------------
+-- gameloop --------------------
+
+function _init()
+  dispatch('reset')
+  every(2^6, 'gc')
+end
+
+function _update60()
+  tick()
+  input()
+  update_groundlevel()
+  physics()
+  dispatch(next(eventloop))
+
+  if shake_frames > 0 then
+    shake_frames = shake_frames - 1
+  end
+
+  if mode == 'play' and paused == false then
+    trex:move()
+  end
+  if trick == 'charge' then
+    if charge == 0 then
+      sfx(7)
+    elseif charge == 16 then
+      sfx(7)
+    end
+    charge = charge + 1
+  end
+end
+
+function _draw()
+  for layer in all(layers) do
+    render[layer]()
+  end
+end
+
+function input()
+  if mode == 'attract' then
+
+    if btn(5) then
+      after(2^4, 'play')
+    end
+
+  elseif mode == 'play' then
+
+    if trex.offset[2] > 0 then
+      return true
+    end
+
+    if btn(5) then
+      if trex.alive == false then
+        after(2^4, 'reset')
+      elseif trick == 'push' then
+        actions.pop()
+      elseif trick == 'pop' then
+        actions.ollie()
+      elseif trick == 'air' and trex.vector[2] <= 1.4 then
+        actions.charge()
+      elseif trick == 'charge' and charge > max_charge then
+        actions.grab()
+      elseif trick == 'grind' then
+        actions.pop()
+      end
+    else
+      if trick == 'push' then
+        can_pop = true
+        can_charge = true
+      elseif trick == 'ollie' then
+        actions.release()
+      elseif trick == 'charge' then --and charge > min_charge then
+        actions.grab()
+      elseif trick == 'grab' then
+        can_charge = true
+      elseif trick == 'grind' then
+        can_pop = true
+        can_charge = true
+        --if groundlevel == 0 then
+          --actions.release()
+        --end
+      end
+    end
+
+  end
+end
+
+
+-->8
+--------------------------------
+-- state -----------------------
 
 mode = 'attract'
 score = 0
@@ -21,6 +112,7 @@ max_charge = 32
 overtaking = false
 cue_jump = false
 groundlevel = 0
+push_speed = 1
 
 shake_frames = 0
 
@@ -79,6 +171,16 @@ sprites = {
   dead_1 = { 48, 16, 16, 16, 0, false },
   ollie_2 = { 64, 16, 16, 16, 0, false },
 
+  --sparks_1 = { 24, 104, 4, 4, 0, false },
+  sparks_1 = { 120, 24, 4, 4, 0, false },
+  sparks_2 = { 124, 24, 4, 4, 0, false },
+  sparks_3 = { 120, 28, 4, 4, 0, false },
+  sparks_4 = { 124, 28, 4, 4, 0, false },
+  sparks_5 = { 124, 28, 4, 4, 0, false },
+  sparks_6 = { 120, 28, 4, 4, 0, false },
+  sparks_7 = { 124, 24, 4, 4, 0, false },
+  sparks_8 = { 120, 24, 4, 4, 0, false },
+
   tower_1 = { 0, 32, 5, 8, 1, false },
   tower_2 = { 6, 32, 14, 8, 1, false },
   tower_3 = { 20, 32, 6, 8, 1, false },
@@ -103,6 +205,10 @@ sprites = {
   road = { 0, 53, 16, 17, 0, false },
   logo = { 0, 64, 96, 32, 0 },
 }
+
+-->8
+--------------------------------
+-- actions ---------------------
 
 actions = {
   cactus = function()
@@ -185,7 +291,7 @@ actions = {
     end
 
     for i,pole in pairs(poles) do
-      if pole.offset[1] < foreground.offset[1] - 128 then
+      if pole.offset[1] < foreground.offset[1] - 64 then
         del(poles, poles[i])
       end
     end
@@ -252,6 +358,11 @@ actions = {
       return
     end
 
+    if #poles > 0 then
+      after(2^4, 'next')
+      return
+    end
+
     nextx = trex.offset[1] + 120
 
     for i = 0,2 do
@@ -309,7 +420,6 @@ actions = {
       return true
     end
 
-    printh('play!!')
     mode = 'play'
     trex.offset[1] = foreground.offset[1] + trex.size[1]
 
@@ -363,6 +473,7 @@ actions = {
       del(cars, k)
     end
     for k,v in pairs(poles) do
+      del(poles, k)
       del(poles, poles[k])
     end
 
@@ -373,7 +484,7 @@ actions = {
     trex.alive = true
     trex.trick = 'push'
     trex.offset = { 10, 0 }
-    trex.vector = { 1.5, 0 }
+    trex.vector = { push_speed, 0 }
     trex.size = { 16, 16 }
     foreground.offset = { -10, -96 }
     foreground.vector = { trex.vector[1], 0 }
@@ -388,58 +499,57 @@ actions = {
 
 }
 
-hitboxes = {
-  cactus = function(c)
-    return {
-      offset = {
-        c.offset[1] + 2,
-        c.offset[2] - c.size[2],
-      },
-      size = {
-        c.size[1] - 4,
-        c.size[2],
-      }
-    }
-  end,
+-->8
+--------------------------------
+-- rendering -------------------
 
-  car = function(c)
-    return {
-      offset = {
-        c.offset[1] + 1,
-        c.offset[2] - c.size[2] + 2,
-      },
-      size = {
-        c.size[1],
-        c.size[2] - 3,
-      },
-    }
-  end,
+function parallax(speed)
+  if speed == 1 then
+    trex.vector[1] = push_speed
+    foreground.offset[1] = trex.offset[1] - 16
+    foreground.vector[1] = trex.vector[1]
+    nearground.vector[1] = 1
+    cityscape.vector[1] = 1
+    sky.vector[1] = 0.5
+  elseif speed == 2 then
+    trex.vector[1] = 2
+    foreground.vector[1] = 2
+    nearground.vector[1] = nearground.vector[1] + 0.5
+    cityscape.vector[1] = cityscape.vector[1] + 0.5
+    sky.vector[1] = sky.vector[1] + 0.5
+  end
+end
 
-  trex = function()
-    if trick == 'grab' then
-      return {
-        offset = {
-          trex.offset[1] + 2,
-          trex.offset[2] - trex.size[2],
-        },
-        size = {
-          12,
-          trex.size[2] * 1
-        }
-      }
-    end
+function draw(id, pos)
+  if sprites[id] == nil then
+    printh('draw - no such '..id)
+    return
+  end
+  b = sprites[id]
+  sx = b[1]
+  sy = b[2]
+  sw = b[3]
+  sh = b[4]
+  alpha = b[5]
+  flip_x = b[6]
 
-    return {
-      offset = {
-        trex.offset[1] + 2,
-        trex.offset[2] - trex.size[2] + 8,
-      },
-      size = { 8, 6 }
-    }
+  for i = 0,15 do
+    transparent = i == alpha
+    palt(i, transparent)
+  end
 
-  end,
-}
-
+  sspr(
+    sx,
+    sy,
+    sw,
+    sh,
+    flr(pos[1]),
+    flr(pos[2]) - sh,
+    sw,
+    sh,
+    flip_x
+  )
+end
 
 render = {
   ui = function()
@@ -450,7 +560,11 @@ render = {
     end
 
     if trick == 'charge' then
-      print(charge .. '', 3, 3, 7)
+      --print(charge .. '', 3, 3, 7)
+    end
+
+    if groundlevel != 0 then
+      print(groundlevel .. '', 3, 3, 7)
     end
 
     if paused == true then
@@ -629,155 +743,12 @@ function stars(x)
   return s
 end
 
-function parallax(speed)
-  if speed == 1 then
-    trex.vector[1] = 1.5
-    foreground.offset[1] = trex.offset[1] - 16
-    foreground.vector[1] = trex.vector[1]
-    nearground.vector[1] = 1
-    cityscape.vector[1] = 1
-    sky.vector[1] = 0.5
-  elseif speed == 2 then
-    trex.vector[1] = 2
-    foreground.vector[1] = 2
-    nearground.vector[1] = nearground.vector[1] + 0.5
-    cityscape.vector[1] = cityscape.vector[1] + 0.5
-    sky.vector[1] = sky.vector[1] + 0.5
-  end
-end
-
-function dispatch(action)
-  if actions[action] ~= nil then
-    printh(action)
-    actions[action]()
-  end
-end
-
-function next(queue)
-  local v = queue[1]
-  del(queue, v)
-  return v
-end
-
-function tick()
-  frame = frame + 1
-
-  for timeout in all(timeouts) do
-    if frame == timeout[1] then
-      add(eventloop, timeout[2])
-      del(timeouts, timeout)
-    end
-  end
-
-  for interval in all(intervals) do
-    if frame % interval[1] == 0 then
-      if interval[2] ~= nil then
-        add(eventloop, interval[2])
-      end
-    end
-  end
-end
-
-function cron(interval)
-  remainder = frame % interval
-  return remainder == 0
-end
-
-function loop(interval, limit)
-  remainder = frame % interval
-  chunk_size = flr(interval / limit)
-  n = flr(remainder / chunk_size)
-  return n
-end
-
-function clear(action)
-  for i,timeout in pairs(timeouts) do
-    if timeout[2] == action then
-      del(timeouts, i)
-    end
-  end
-end
-
-function after(frames, action)
-  add(timeouts, { frame + frames, action })
-end
-
-function every(interval, action)
-  add(intervals, { interval, action })
-end
-
-function draw(id, pos)
-  if sprites[id] == nil then
-    printh('draw - no such '..id)
-    return
-  end
-  b = sprites[id]
-  sx = b[1]
-  sy = b[2]
-  sw = b[3]
-  sh = b[4]
-  alpha = b[5]
-  flip_x = b[6]
-
-  for i = 0,15 do
-    transparent = i == alpha
-    palt(i, transparent)
-  end
-
-  sspr(
-    sx,
-    sy,
-    sw,
-    sh,
-    flr(pos[1]),
-    flr(pos[2]) - sh,
-    sw,
-    sh,
-    flip_x
-  )
-end
-
-function intersect(a, b)
-
-  ax1 = a.offset[1]
-  ax2 = a.offset[1] + a.size[1]
-  ay1 = a.offset[2]
-  ay2 = a.offset[2] + a.size[2]
-
-  bx1 = b.offset[1]
-  bx2 = b.offset[1] + b.size[1]
-  by1 = b.offset[2]
-  by2 = b.offset[2] + b.size[2]
-
-  --left
-  if ax2 < bx1 then
-    return false
-  end
-
-  --right
-  if ax1 > bx2 then
-    return false
-  end
-
-  --above
-  if ay2 < by1 then
-    return false
-  end
-
-  --below
-  if ay1 > by2 then
-    return false
-  end
-
-  return true
-end
-
 function draw_cactus(cactus)
   if cactus.alive then
     draw('cactus_alive_1', cactus.offset)
   else
     fsd = frame - cactus.died
-    sprite = 'cactus_dead_' .. flr(fsd / 4) + 1
+    sprite = 'cactus_dead_' .. min(flr(fsd / 4) + 1, 5)
     draw(sprite, cactus.offset)
   end
 end
@@ -854,111 +825,63 @@ function draw_trex()
     )
   end
 
+  if trick == 'grind' then
+    spark = 'sparks_' .. loop(2^5, 7) + 1
+    draw(spark, {
+      ceil(trex.offset[1]) - 2,
+      trex.offset[2],
+    })
+    draw(spark, {
+      ceil(trex.offset[1]) + 6,
+      trex.offset[2],
+    })
+  end
+
   draw(sprite_name, {
     ceil(trex.offset[1]),
     trex.offset[2],
   })
 end
 
-function trex:move()
-  if self.alive == false then
-    decel = 0.1
-    if self.vector[1] - decel < 0 then
-      self.vector[1] = 0
-    else
-      self.vector[1] = self.vector[1] - decel
-    end
-  end
-  self.offset[1] = self.offset[1] + self.vector[1]
-  if trick == 'grind' then
-    self.offset[2] = groundlevel - 2
-  else
-    self.offset[2] = self.offset[2] + self.vector[2]
-  end
-  if self.alive and self.offset[2] > groundlevel then
-    if groundlevel == 0 then
-      add(eventloop, 'land')
-    else
-      actions.grind()
-    end
-  end
-end
 
-function input()
-  if mode == 'attract' then
 
-    if btn(5) then
-      after(2^4, 'play')
-    end
+-->8
+--------------------------------
+-- math -----------------------
 
-  elseif mode == 'play' then
+function intersect(a, b)
 
-    if trex.offset[2] > 0 then
-      return true
-    end
+  ax1 = a.offset[1]
+  ax2 = a.offset[1] + a.size[1]
+  ay1 = a.offset[2]
+  ay2 = a.offset[2] + a.size[2]
 
-    if btn(5) then
-      if trex.alive == false then
-        after(2^4, 'reset')
-      elseif trick == 'push' then
-        actions.pop()
-      elseif trick == 'pop' then
-        actions.ollie()
-      elseif trick == 'air' and trex.vector[2] <= 1.4 then
-        actions.charge()
-      elseif trick == 'charge' and charge > max_charge then
-        actions.grab()
-      elseif trick == 'grind' then
-        actions.pop()
-      end
-    else
-      if trick == 'push' then
-        can_pop = true
-        can_charge = true
-      elseif trick == 'ollie' then
-        actions.release()
-      elseif trick == 'charge' then --and charge > min_charge then
-        actions.grab()
-      elseif trick == 'grab' then
-        can_charge = true
-      elseif trick == 'grind' then
-        can_pop = true
-        can_charge = true
-      end
-    end
+  bx1 = b.offset[1]
+  bx2 = b.offset[1] + b.size[1]
+  by1 = b.offset[2]
+  by2 = b.offset[2] + b.size[2]
 
-  end
-end
-
-function gravity()
-  if trex.offset[2] >= 0 then
-    return
+  --left
+  if ax2 < bx1 then
+    return false
   end
 
-  air = abs(trex.offset[2]) / 2^7
-
-  if trick == 'charge' then
-    --nothing lol
-  elseif trick == 'grind' then
-    trex.offset[2] = groundlevel
-  elseif trex.vector[2] < 0 then
-    if trick == 'ollie' then
-      mul = 0.6
-    else
-      mul = 1
-    end
-    --pop
-    trex.vector[2] = trex.vector[2] + (0.25 * mul)
-  elseif trex.vector[2] < 0.5 and trick == 'ollie' then
-    --hang
-    trex.vector[2] = trex.vector[2] + 0.25 * 0.1
-  else
-    --drop
-    trex.vector[2] = min(
-      trex.vector[2] + 0.95 * air,
-      3
-    )
+  --right
+  if ax1 > bx2 then
+    return false
   end
+
+  --above
+  if ay2 < by1 then
+    return false
+  end
+
+  --below
+  if ay1 > by2 then
+    return false
+  end
+
+  return true
 end
 
 function angle(a, b)
@@ -1001,6 +924,97 @@ function cable_buckle(p1, p2)
   return b
 end
 
+
+-->8
+--------------------------------
+-- physics ---------------------
+
+function physics()
+  gravity()
+
+  sky.offset[1] = (
+      sky.offset[1]
+    + sky.vector[1]
+  )
+  cityscape.offset[1] = (
+      cityscape.offset[1]
+    + cityscape.vector[1]
+  )
+  nearground.offset[1] = (
+      nearground.offset[1]
+    + nearground.vector[1]
+  )
+  foreground.offset[1] = ceil(
+      foreground.offset[1]
+    + foreground.vector[1]
+  )
+
+  if mode == 'play' and paused == false then
+    t = hitboxes.trex()
+    for cactus in all(cacti) do
+      c = hitboxes.cactus(cactus)
+      if intersect(t, c) then
+        if is_attack[trick] then
+          actions.destroy_cactus(cactus)
+        else
+          add(eventloop, 'gameover')
+        end
+      end
+    end
+
+    for car in all(cars) do
+      car.offset[1] = ceil(car.offset[1] + car.vector[1])
+      car.offset[2] = car.offset[2] + car.vector[2]
+
+      c = hitboxes.car(car)
+      if intersect(t, c) then
+        if is_attack[trick] then
+          actions.destroy_car()
+        else
+          add(eventloop, 'gameover')
+        end
+      end
+
+      if trex.offset[1] == car.offset[1] then
+        score = score + 10
+      end
+    end
+  end
+end
+
+
+
+function gravity()
+  if trex.offset[2] >= 0 then
+    return
+  end
+
+  air = abs(trex.offset[2]) / 2^7
+
+  if trick == 'charge' then
+    --nothing lol
+  elseif trick == 'grind' and groundlevel != 0 then
+    trex.offset[2] = groundlevel
+  elseif trex.vector[2] < 0 then
+    if trick == 'ollie' then
+      mul = 0.6
+    else
+      mul = 1
+    end
+    --pop
+    trex.vector[2] = trex.vector[2] + (0.25 * mul)
+  elseif trex.vector[2] < 0.5 and trick == 'ollie' then
+    --hang
+    trex.vector[2] = trex.vector[2] + 0.25 * 0.1
+  else
+    --drop
+    trex.vector[2] = min(
+      trex.vector[2] + 0.95 * air,
+      3
+    )
+  end
+end
+
 function update_groundlevel()
   for i,pole in pairs(poles) do
     if i == #poles then
@@ -1024,93 +1038,156 @@ function update_groundlevel()
   end
 end
 
-function physics()
-  gravity()
+hitboxes = {
+  cactus = function(c)
+    return {
+      offset = {
+        c.offset[1] + 2,
+        c.offset[2] - c.size[2],
+      },
+      size = {
+        c.size[1] - 4,
+        c.size[2],
+      }
+    }
+  end,
 
-  sky.offset[1] = (
-      sky.offset[1]
-    + sky.vector[1]
-  )
-  cityscape.offset[1] = (
-      cityscape.offset[1]
-    + cityscape.vector[1]
-  )
-  nearground.offset[1] = (
-      nearground.offset[1]
-    + nearground.vector[1]
-  )
-  foreground.offset[1] = (
-      foreground.offset[1]
-    + foreground.vector[1]
-  )
+  car = function(c)
+    return {
+      offset = {
+        c.offset[1] + 1,
+        c.offset[2] - c.size[2] + 2,
+      },
+      size = {
+        c.size[1],
+        c.size[2] - 3,
+      },
+    }
+  end,
 
-  if mode == 'play' and paused == false then
-    t = hitboxes.trex()
-    for cactus in all(cacti) do
-      c = hitboxes.cactus(cactus)
-      if intersect(t, c) then
-        if is_attack[trick] then
-          actions.destroy_cactus(cactus)
-        else
-          add(eventloop, 'gameover')
-        end
-      end
+  trex = function()
+    if trick == 'grab' then
+      return {
+        offset = {
+          trex.offset[1] + 2,
+          trex.offset[2] - trex.size[2],
+        },
+        size = {
+          12,
+          trex.size[2] * 1
+        }
+      }
     end
 
-    for car in all(cars) do
-      car.offset[1] = car.offset[1] + car.vector[1]
-      car.offset[2] = car.offset[2] + car.vector[2]
+    return {
+      offset = {
+        trex.offset[1] + 2,
+        trex.offset[2] - trex.size[2] + 8,
+      },
+      size = { 8, 6 }
+    }
 
-      c = hitboxes.car(car)
-      if intersect(t, c) then
-        if is_attack[trick] then
-          actions.destroy_car()
-        else
-          add(eventloop, 'gameover')
-        end
-      end
+  end,
+}
 
-      if trex.offset[1] == car.offset[1] then
-        score = score + 10
+function trex:move()
+  if self.alive == false then
+    decel = 0.1
+    if self.vector[1] - decel < 0 then
+      self.vector[1] = 0
+    else
+      self.vector[1] = self.vector[1] - decel
+    end
+  end
+  self.offset[1] = ceil(self.offset[1] + self.vector[1])
+  if trick == 'grind' and groundlevel == 0 then
+    actions.release()
+    --self.vector[2] = 0
+    self.offset[2] = self.offset[2]
+  elseif trick == 'grind' then
+    self.offset[2] = groundlevel - 2
+  else
+    self.offset[2] = self.offset[2] + self.vector[2]
+  end
+  if self.alive and self.offset[2] > groundlevel then
+    if groundlevel == 0 then
+      add(eventloop, 'land')
+    else
+      actions.grind()
+    end
+  end
+end
+
+
+
+-->8
+--------------------------------
+-- timekeeping -----------------
+
+function dispatch(action)
+  if actions[action] ~= nil then
+    printh(action)
+    actions[action]()
+  end
+end
+
+function next(queue)
+  local v = queue[1]
+  del(queue, v)
+  return v
+end
+
+function tick()
+  frame = frame + 1
+  for timeout in all(timeouts) do
+    if frame == timeout[1] then
+      add(eventloop, timeout[2])
+      del(timeouts, timeout)
+    end
+  end
+  for interval in all(intervals) do
+    if frame % interval[1] == 0 then
+      if interval[2] ~= nil then
+        add(eventloop, interval[2])
       end
     end
   end
 end
 
-function _init()
-  dispatch('reset')
-  every(2^6, 'gc')
+function cron(interval)
+  remainder = frame % interval
+  return remainder == 0
 end
 
-function _update60()
-  tick()
-  input()
-  update_groundlevel()
-  physics()
-  dispatch(next(eventloop))
+function loop(interval, limit)
+  remainder = frame % interval
+  chunk_size = flr(interval / limit)
+  n = flr(remainder / chunk_size)
+  return n
+end
 
-  if shake_frames > 0 then
-    shake_frames = shake_frames - 1
-  end
-
-  if mode == 'play' and paused == false then
-    trex:move()
-  end
-  if trick == 'charge' then
-    if charge == 0 then
-      sfx(7)
-    elseif charge == 16 then
-      sfx(7)
+function clear(action)
+  for i,timeout in pairs(timeouts) do
+    if timeout[2] == action then
+      del(timeouts, i)
     end
-    charge = charge + 1
   end
 end
 
-function _draw()
-  for layer in all(layers) do
-    render[layer]()
-  end
+function after(frames, action)
+  add(timeouts, { frame + frames, action })
 end
+
+function every(interval, action)
+  add(intervals, { interval, action })
+end
+
+
+-->8
+--------------------------------
+-- anything --------------------
+
+
 
 __gfx__
 00000000888800000000000088880000000000008888000000000000000000000000000000000000000000000000000000000000888800000000000000000000
@@ -1139,12 +1216,12 @@ __gfx__
 08800888880000000880088888000000800008888800000000008888888888800880088888000000000000000000000000000000000000000000000000000000
 0888888888880000088888888888c000888888888888c00000888888888888880888888888880000000000000000000000000000000000000000000000000000
 0888888888080000088888888808c000088888888808c00008888888888875880888888888080000000000000000000000000000000000000000000000000000
-008888888800000000888888880c000000888888880c0000088888888888c5880088888888000000000000000000000000000000000000000000000000000000
-00088888800000000008888800c070000008888800c0700088888800808888880008888880c00000000000000000000000000000000000000000000000000000
-0000080080000000000008088c000000000008088c0000008888088080888880000008008cc00000000000000000000000000000000000000000000000000000
-0cc0088088cc000000000880c000000000000880c000000008800080008888000000080cc0700000000000000000000000000000000000000000000000000000
-000cccccccc00000000000cc07000000000000cc07000000088800000088880000000cc000000000000000000000000000000000000000000000000000000000
-00070000070000000000000000000000000000000000000000888800000000000000000700000000000000000000000000000000000000000000000000000000
+008888888800000000888888880c000000888888880c0000088888888888c58800888888880c000000000000000000000000000000000000000000000000000a
+00088888800000000008888800c070000008888800c0700088888800808888880008888880cc0000000000000000000000000000000000000000000000090a0a
+0000080080000000000008088c000000000008088c0000008888088080888880000008008cc000000000000000000000000000000000000000000000000aa0a0
+0cc0088088cc000000000880c000000000000880c00000000880008000888800000cc80cc070000000000000000000000000000000000000000000000a000000
+000cccccccc00000000000cc07000000000000cc0700000008880000008888000000ccc000000000000000000000000000000000000000000000000000000009
+000700000700000000000000000000000000000000000000008888000000000000000070000000000000000000000000000000000000000000000000aa090a00
 111111111111111111111111111111110000b0000000900000000009000a00000000000000000000000000000000000000000000000000000000000000000000
 11111111111111111111111111111111000bbb0b0000000ba0000000000000000d00000d00000000000000000000000000000000000000000000000000000000
 222221111111111111111111111111110b0bbb0b000090bbb0b0000900ba000000d666d000000000000000000000000000000000000000000000000000000000
@@ -1177,7 +1254,7 @@ dddddddddddddddddddddddddddddddda3333309000a39333990000a933390a00000d00000000000
 5555555555555555555555555555555500033390000a33333900000a93339aa00000d00000000000000000000000000000000000000000000000000000000000
 5555555555555555555555555555555500033390000000333900000093339a000000d00000000000000000000000000000000000000000000000000000000000
 5555555555555555555555555555555500033390000000333000000093339a000000d00000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000003330000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
