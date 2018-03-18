@@ -20,10 +20,12 @@ min_charge = 2
 max_charge = 32
 overtaking = false
 cue_jump = false
+groundlevel = 0
 
 shake_frames = 0
 
 cacti = {}
+poles = {}
 cars = {}
 
 tricks = {
@@ -33,6 +35,7 @@ tricks = {
   'ollie',
   'charge',
   'grab',
+  'grind',
 }
 
 is_attack = {
@@ -42,6 +45,7 @@ is_attack = {
   ollie = false,
   charge = true,
   grab = true,
+  grind = false,
 }
 
 trick = 'none'
@@ -91,6 +95,8 @@ sprites = {
   cactus_dead_4 = { 44, 48, 8, 16, 0, false },
   cactus_dead_5 = { 55, 48, 8, 16, 0, false },
 
+  pole = { 64, 32, 8, 32, 0, false },
+
   car_right_1 = { 0, 115, 24, 12, 13, false },
   car_left_1 = { 24, 115, 24, 12, 1, true },
   car_left_2 = { 48, 115, 24, 12, 1, true },
@@ -118,13 +124,9 @@ actions = {
     --clear('charge_limit')
     trick = 'charge'
     charge = 0
-    trex.vector[2] = trex.vector[2] / 2
+    trex.vector[2] = -0.5
 
-    trex.vector[1] = 2.5
-    foreground.vector[1] = 2.5
-    nearground.vector[1] = nearground.vector[1] + 0.5
-    cityscape.vector[1] = cityscape.vector[1] + 0.5
-    sky.vector[1] = sky.vector[1] + 0.5
+    parallax(2)
 
     --sfx(3)
     --after(2^6, 'charge_limit')
@@ -149,6 +151,7 @@ actions = {
       cacti[1].offset[2] -
       cacti[1].size[2]
     )
+    parallax(1)
     cactus.alive = false
     cactus.died = frame
     trex.vector[2] = -4
@@ -163,6 +166,7 @@ actions = {
       cars[1].offset[2] -
       cars[1].size[2]
     )
+    parallax(1)
     trex.vector[2] = -4
   end,
 
@@ -177,6 +181,12 @@ actions = {
       d = foreground.offset[1] + 64 - car.offset[1]
       if d > 256 then
         del(cars, i)
+      end
+    end
+
+    for i,pole in pairs(poles) do
+      if pole.offset[1] < foreground.offset[1] - 128 then
+        del(poles, poles[i])
       end
     end
   end,
@@ -196,6 +206,14 @@ actions = {
     trex.vector[2] = charge / 4
   end,
 
+  grind = function()
+    parallax(1)
+    trick = 'grind'
+    trex.offset[1] = ceil(trex.offset[1])
+    trex.offset[2] = groundlevel
+    trex.vector[2] = 0
+  end,
+
   land = function()
     if trex.alive then
       cooloff_time = 2^2
@@ -209,19 +227,8 @@ actions = {
       trick = 'push'
     end
     --ollie_cooloff = true
-    trex.vector[1] = 1.5
-    foreground.vector[1] = 1.5
-    foreground.offset[1] = trex.offset[1] - 16
 
-    nearground.vector[1] = nearground.vector[1] - 1
-    cityscape.vector[1] = cityscape.vector[1] - 1
-    sky.vector[1] = sky.vector[1] - 0.5
-
-    foreground.vector[1] = trex.vector[1]
-    nearground.vector[1] = 1
-    cityscape.vector[1] = 1
-    sky.vector[1] = 0.5
-
+    parallax(1)
     trex.offset[2] = 0
     trex.vector[2] = 0
     after(cooloff_time, 'cooloff')
@@ -236,8 +243,24 @@ actions = {
       add(script, 'cactus')
     else
       add(script, 'cactus')
-      --add(script, 'start_ram')
+      add(script, 'add_pole')
     end
+  end,
+
+  add_pole = function()
+    if mode != 'play' or paused then
+      return
+    end
+
+    nextx = trex.offset[1] + 120
+
+    for i = 0,2 do
+      add(poles, {
+        offset = { nextx + i * 64, -32 },
+        size = { 8, 32 },
+      })
+    end
+    after(2^4, 'next')
   end,
 
   pop = function()
@@ -245,8 +268,12 @@ actions = {
     if can_pop == false then
       return
     end
+    if trick == 'grind' then
+      trex.vector[2] = -4
+    else
+      trex.vector[2] = -3.2
+    end
     trick = 'pop'
-    trex.vector[2] = -3.2
 
     sfx(0)
     can_pop = false
@@ -287,6 +314,7 @@ actions = {
     trex.offset[1] = foreground.offset[1] + trex.size[1]
 
     --add(script, 'start_ram')
+    add(script, 'add_pole')
     add(script, 'start_overtake')
     add(script, 'cactus')
     add(eventloop, 'next')
@@ -334,9 +362,14 @@ actions = {
     for k,v in pairs(cars) do
       del(cars, k)
     end
+    for k,v in pairs(poles) do
+      del(poles, poles[k])
+    end
 
     cars = {}
     cacti = {}
+    poles = {}
+    groundlevel = 0
     trex.alive = true
     trex.trick = 'push'
     trex.offset = { 10, 0 }
@@ -474,6 +507,19 @@ render = {
       end
     end
 
+    for pole in all(poles) do
+      --h = hitboxes.cactus(cactus)
+      --rectfill(
+        --h.offset[1],
+        --h.offset[2],
+        --h.offset[1] + h.size[1],
+        --h.offset[2] + h.size[2],
+        --14
+      --)
+      draw_pole(pole)
+    end
+    draw_cables()
+
     if mode == 'play' then
       --h = hitboxes.trex()
       --rectfill(
@@ -581,6 +627,23 @@ function stars(x)
     end
   end
   return s
+end
+
+function parallax(speed)
+  if speed == 1 then
+    trex.vector[1] = 1.5
+    foreground.offset[1] = trex.offset[1] - 16
+    foreground.vector[1] = trex.vector[1]
+    nearground.vector[1] = 1
+    cityscape.vector[1] = 1
+    sky.vector[1] = 0.5
+  elseif speed == 2 then
+    trex.vector[1] = 2
+    foreground.vector[1] = 2
+    nearground.vector[1] = nearground.vector[1] + 0.5
+    cityscape.vector[1] = cityscape.vector[1] + 0.5
+    sky.vector[1] = sky.vector[1] + 0.5
+  end
 end
 
 function dispatch(action)
@@ -707,28 +770,6 @@ function intersect(a, b)
   end
 
   return true
-  --printh(b2.offset[1] ..'x'.. b2.offset[2])
-  -- left
-  --if b1.offset[1] <= b2.offset[1] - b1.size[1] then
-    --return false
-  --end
-
-  -- right
-  --if b1.offset[1] >= b2.offset[1] + b2.size[1] then
-    --return false
-  --end
-
-  -- above
-  --if b1.offset[2] <= b2.offset[2] - b1.size[2] then
-    --return false
-  --end
-
-  -- below
-  --if b1.offset[2] >= b2.offset[2] - b2.size[2] then
-    --return false
-  --end
-
-  --return true
 end
 
 function draw_cactus(cactus)
@@ -738,6 +779,34 @@ function draw_cactus(cactus)
     fsd = frame - cactus.died
     sprite = 'cactus_dead_' .. flr(fsd / 4) + 1
     draw(sprite, cactus.offset)
+  end
+end
+
+function draw_pole(pole)
+  draw('pole', {
+    pole.offset[1] - pole.size[1] / 2,
+    pole.offset[2] + pole.size[2] - 2,
+  })
+end
+
+function draw_cables()
+  for i,pole in pairs(poles) do
+    if i == #poles then
+      return
+    end
+
+    tx = trex.offset[1]
+    x0 = poles[i].offset[1]
+    y0 = poles[i].offset[2]
+    x1 = poles[(i+1)].offset[1]
+    y1 = poles[i+1].offset[2]
+
+    if tx > x0 and tx < x1 and trick == 'grind' then
+      line(x0, y0, tx, groundlevel - 2, 5)
+      line(tx, groundlevel - 2, x1, y1, 5)
+    else
+      line(x0, y0, x1, y1, 5)
+    end
   end
 end
 
@@ -771,6 +840,8 @@ function draw_trex()
     sprite_name = 'grab_1'
   elseif trick == 'charge' then
     sprite_name = 'grab_1'
+  elseif trick == 'grind' then
+    sprite_name = 'roll_1'
   end
 
   if trick == 'charge' then
@@ -799,9 +870,17 @@ function trex:move()
     end
   end
   self.offset[1] = self.offset[1] + self.vector[1]
-  self.offset[2] = self.offset[2] + self.vector[2]
-  if self.alive and self.offset[2] > 0 then
-    add(eventloop, 'land')
+  if trick == 'grind' then
+    self.offset[2] = groundlevel - 2
+  else
+    self.offset[2] = self.offset[2] + self.vector[2]
+  end
+  if self.alive and self.offset[2] > groundlevel then
+    if groundlevel == 0 then
+      add(eventloop, 'land')
+    else
+      actions.grind()
+    end
   end
 end
 
@@ -829,6 +908,8 @@ function input()
         actions.charge()
       elseif trick == 'charge' and charge > max_charge then
         actions.grab()
+      elseif trick == 'grind' then
+        actions.pop()
       end
     else
       if trick == 'push' then
@@ -839,6 +920,9 @@ function input()
       elseif trick == 'charge' then --and charge > min_charge then
         actions.grab()
       elseif trick == 'grab' then
+        can_charge = true
+      elseif trick == 'grind' then
+        can_pop = true
         can_charge = true
       end
     end
@@ -855,6 +939,8 @@ function gravity()
 
   if trick == 'charge' then
     --nothing lol
+  elseif trick == 'grind' then
+    trex.offset[2] = groundlevel
   elseif trex.vector[2] < 0 then
     if trick == 'ollie' then
       mul = 0.6
@@ -872,6 +958,69 @@ function gravity()
       trex.vector[2] + 0.95 * air,
       3
     )
+  end
+end
+
+function angle(a, b)
+  return atan2(
+    b[2] - a[2],
+    b[1] - a[1]
+  )
+end
+
+function distance(a, b)
+  distance_x = abs(a[1] - b[1])
+  distance_y = abs(a[2] - b[2])
+  distance_2 = abs(
+    (distance_x * distance_x)
+    + (distance_y * distance_y)
+  )
+  return sqrt(distance_2)
+end
+
+function tan(a) return sin(a)/cos(a) end
+
+function cable_buckle(p1, p2)
+  tx = trex.offset[1]
+  x1 = p1.offset[1]
+  a = tx - x1
+  if trick != 'grind' then
+    b = 0
+  elseif a > 24 and a < 40 then
+    b = 6
+  elseif a > 16 and a < 38 then
+    b = 5
+  elseif a > 8 and a < 56 then
+    b = 4
+  elseif a > 4 or a < 60 then
+    b = 3
+  else
+    b = 2
+  end
+
+  return b
+end
+
+function update_groundlevel()
+  for i,pole in pairs(poles) do
+    if i == #poles then
+      groundlevel = 0
+      return
+    end
+    p1 = poles[i]
+    p2 = poles[i+1]
+    tx = trex.offset[1]
+    ty = trex.offset[2] -- trex.size[2]
+    x0 = p1.offset[1]
+    y0 = p1.offset[2]
+    x1 = p2.offset[1]
+    if tx >= x0 and tx <= x1 then
+      buckle = cable_buckle(p1, p2)
+      if trick == 'grind' or ty <= y0 + buckle + 1 then
+        groundlevel = y0 + buckle
+        return
+      end
+    end
   end
 end
 
@@ -936,6 +1085,7 @@ end
 function _update60()
   tick()
   input()
+  update_groundlevel()
   physics()
   dispatch(next(eventloop))
 
@@ -996,37 +1146,37 @@ __gfx__
 000cccccccc00000000000cc07000000000000cc07000000088800000088880000000cc000000000000000000000000000000000000000000000000000000000
 00070000070000000000000000000000000000000000000000888800000000000000000700000000000000000000000000000000000000000000000000000000
 111111111111111111111111111111110000b0000000900000000009000a00000000000000000000000000000000000000000000000000000000000000000000
-11111111111111111111111111111111000bbb0b0000000ba0000000000000000000000000000000000000000000000000000000000000000000000000000000
-222221111111111111111111111111110b0bbb0b000090bbb0b0000900ba00000000000000000000000000000000000000000000000000000000000000000000
-2e2e21122222222222111111122222110b0bbb0b0000b0bbb0b000090bbbab00dddddddddddddddddddddddddddddddd00000000000000000000000000000000
-22222112e2ee22222211111112e2e2110b0bbb0b0000b0bbb0b0000b0bbb0b00dddddddddddddddddddddddddddddddd00000000000000000000000000000000
-2e2e21222222222222221112222222210b0bbb0b0000b0bbb0b000ab0bbb0b00dddddddddddddddddddddddddddddddd00000000000000000000000000000000
-2222212ee2ee222222e21122e22222220b0bbbbb000ab0bbb0b0000b0bbb0b00ddddddddd6666666666666dddddddddd00000000000000000000000000000000
-222221222222222222221122222222220b0bbbb00000b0bbbbb900ab0bbb0b00dddd6667676555556555556ddddddddd00000000000000000000000000000000
-111111111111111111111111111111110b0bbb00000ab0bbbb0000ab0bbbbb90ddd6dd777765555565555556dddddddd00000000000000000000000000000000
-111111111111111111111111113311330bbbbb00000ab0bbb00900ab0bbbb000d66666006666666666666666666666dd00000000000000000000000000000000
-11111111111111111111131131131331000bbb00000abbbbb00000ab0bbb0a90d67660000667a7766677a7766000066d00000000000000000000000000000000
-11111111133111111331331133131311000bbb00000000bbba0000abbbbb0000d6760077006a9a76067a9a760077006d00000000000000000000000000000000
-11111111111311111133311113333311000bbb00000000bbb90000000bbb9000d6760077006a9a76067a9a760077006d00000000000000000000000000000000
-11131111111311111113111111333111000bbb00000000bbb00000000bbb9000d66600000067a7760677a7760000006d00000000000000000000000000000000
-11131111111311111113111111131111000bbb00000000bbb00000000bbb0000ddddd0000dddddddddddddddd0000ddd00000000000000000000000000000000
-11131111111311111113111111131111000bbb00000000bbb00000000bbb0000dddddddddddddddddddddddddddddddd00000000000000000000000000000000
-44444444444444444444444444444444000900000000009000000000000000000000000000000000000000000000000000000000000000000000000000000000
-44444444444444444444444444444444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-44444444444444444444444444444444000900000000009000a00000000000000008000000000000000000000000000000000000000000000000000000000000
-4444444444444444444444444444444409093a00000000900000000000000a000008000000000000000000000000000000000000000000000000000000000000
-44444444444444444444444444444444099333a30000909390a0000000a000000008000000088888000080000000000000000000000000000000000000000000
-55555555555555555555555555555555a303330300a099933aa0000000000a000008000000880008000080000000000000000000000000000000000000000000
-5555555555555555555555555555555503033303000039333a3000000000a0000008000000800008000080000000000000000000000000000000000000000000
-dddddddddddddddddddddddddddddddda393330300a039333a309000a000a0000008000000800008000080000000000000000000000000000000000000000000
-dddddddddddddddddddddddddddddddda303330300aa39333a30000000aaa0000008000000800008000080000000000000000000000000000000000000000000
-dddd66666666dddddddd66666666dddda3933333000a39333039000aa0aaa0000008000000800008000080000000000000000000000000000000000000000000
-dddddddddddddddddddddddddddddddda3933330a00a39333339000a9999a0a00008000000800888000080000000000000000000000000000000000000000000
-dddddddddddddddddddddddddddddddda393330a000a39333399000a933900000008888000088800000080000000000000000000000000000000000000000000
-dddddddddddddddddddddddddddddddda3333309000a39333990000a933390a00000000000000000000088888800000000000000000000000000000000000000
-5555555555555555555555555555555500033390000a33333900000a93339aa00000000000000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500033390000000333900000093339a000000000000000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500033390000000333000000093339a000000000000000000000000000000000000000000000000000000000000000000
+11111111111111111111111111111111000bbb0b0000000ba0000000000000000d00000d00000000000000000000000000000000000000000000000000000000
+222221111111111111111111111111110b0bbb0b000090bbb0b0000900ba000000d666d000000000000000000000000000000000000000000000000000000000
+2e2e21122222222222111111122222110b0bbb0b0000b0bbb0b000090bbbab00000d0d0000000000000000000000000000000000000000000000000000000000
+22222112e2ee22222211111112e2e2110b0bbb0b0000b0bbb0b0000b0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
+2e2e21222222222222221112222222210b0bbb0b0000b0bbb0b000ab0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
+2222212ee2ee222222e21122e22222220b0bbbbb000ab0bbb0b0000b0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
+222221222222222222221122222222220b0bbbb00000b0bbbbb900ab0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
+111111111111111111111111111111110b0bbb00000ab0bbbb0000ab0bbbbb900000d00000000000000000000000000000000000000000000000000000000000
+111111111111111111111111113311330bbbbb00000ab0bbb00900ab0bbbb0000000d00000000000000000000000000000000000000000000000000000000000
+11111111111111111111131131131331000bbb00000abbbbb00000ab0bbb0a900000d00000000000000000000000000000000000000000000000000000000000
+11111111133111111331331133131311000bbb00000000bbba0000abbbbb00000000d00000000000000000000000000000000000000000000000000000000000
+11111111111311111133311113333311000bbb00000000bbb90000000bbb90000000d00000000000000000000000000000000000000000000000000000000000
+11131111111311111113111111333111000bbb00000000bbb00000000bbb90000000d00000000000000000000000000000000000000000000000000000000000
+11131111111311111113111111131111000bbb00000000bbb00000000bbb00000000d00000000000000000000000000000000000000000000000000000000000
+11131111111311111113111111131111000bbb00000000bbb00000000bbb00000000d00000000000000000000000000000000000000000000000000000000000
+44444444444444444444444444444444000900000000009000000000000000000000d00000000000000000000000000000000000000000000000000000000000
+44444444444444444444444444444444000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000
+44444444444444444444444444444444000900000000009000a00000000000000000d00000000000000000000000000000000000000000000000000000000000
+4444444444444444444444444444444409093a00000000900000000000000a000000d00000000000000000000000000000000000000000000000000000000000
+44444444444444444444444444444444099333a30000909390a0000000a000000000d00000000000000000000000000000000000000000000000000000000000
+55555555555555555555555555555555a303330300a099933aa0000000000a000000d00000000000000000000000000000000000000000000000000000000000
+5555555555555555555555555555555503033303000039333a3000000000a0000000d00000000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddda393330300a039333a309000a000a0000000d00000000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddda303330300aa39333a30000000aaa0000000d00000000000000000000000000000000000000000000000000000000000
+dddd66666666dddddddd66666666dddda3933333000a39333039000aa0aaa0000000d00000000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddda3933330a00a39333339000a9999a0a00000d00000000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddda393330a000a39333399000a933900000000d00000000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddda3333309000a39333990000a933390a00000d00000000000000000000000000000000000000000000000000000000000
+5555555555555555555555555555555500033390000a33333900000a93339aa00000d00000000000000000000000000000000000000000000000000000000000
+5555555555555555555555555555555500033390000000333900000093339a000000d00000000000000000000000000000000000000000000000000000000000
+5555555555555555555555555555555500033390000000333000000093339a000000d00000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000003330000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
