@@ -5,8 +5,9 @@ __lua__
 -- gameloop --------------------
 
 function _init()
+  poke(0x5f2d, 1)
   dispatch('reset')
-  every(2^6, 'gc')
+  every(60, 'gc')
 end
 
 function _update60()
@@ -40,10 +41,18 @@ function _draw()
 end
 
 function input()
+  jump = btn(5)
+  if stat(34) == 1 then
+    jump = true
+  end
+  if getchar() == ' ' then
+    jump = true
+  end
+
   if mode == 'attract' then
 
-    if btn(5) then
-      after(2^4, 'play')
+    if jump then
+      after(16, 'play')
     end
 
   elseif mode == 'play' then
@@ -52,9 +61,9 @@ function input()
       return true
     end
 
-    if btn(5) then
+    if jump then
       if trex.alive == false then
-        after(2^4, 'reset')
+        after(16, 'reset')
       elseif trick == 'push' then
         actions.pop()
       elseif trick == 'pop' then
@@ -104,7 +113,6 @@ eventloop = {}
 script = {}
 
 trex = {}
-ollie_cooloff = false
 can_pop = true
 can_charge = true
 min_charge = 2
@@ -118,6 +126,7 @@ shake_frames = 0
 
 cacti = {}
 poles = {}
+cables = {}
 cars = {}
 
 tricks = {
@@ -197,7 +206,7 @@ sprites = {
   cactus_dead_4 = { 44, 48, 8, 16, 0, false },
   cactus_dead_5 = { 55, 48, 8, 16, 0, false },
 
-  pole = { 64, 32, 8, 32, 0, false },
+  pole = { 64, 32, 8, 4, 0, false },
 
   car_right_1 = { 0, 115, 24, 12, 13, false },
   car_left_1 = { 24, 115, 24, 12, 1, true },
@@ -206,21 +215,61 @@ sprites = {
   logo = { 0, 64, 96, 32, 0 },
 }
 
+function add_cactus(x)
+  add(cacti, {
+    offset = { x, 0 },
+    size = { 6, 16 },
+    alive = true,
+  })
+end
+
+function add_pole(x, h)
+  add(poles, {
+    offset = { x, -3 },
+    size = { 1, h },
+  })
+end
+
+function add_cable(x1, y1, x2, y2)
+  add(cables, { x1, y1, x2, y2 })
+end
+
 -->8
 --------------------------------
 -- actions ---------------------
+
+set_pieces = {
+  'cactus_rail',
+  'quad_cactus',
+  'rail_gap',
+}
 
 actions = {
   cactus = function()
     if mode == 'play' and paused == false then
       nextx = trex.offset[1] + 120
-      add(cacti, {
-        offset = { nextx, 0 },
-        size = { 6, 16 },
-        alive = true,
-      })
-      after(2^7, 'next')
+      add_cactus(nextx)
+      after(128, 'next')
     end
+  end,
+
+  cactus_rail = function()
+    if mode != 'play' or paused then
+      return
+    end
+
+    x = trex.offset[1] + 120
+
+    add_cactus(x)
+    add_pole(x + 40, 32)
+    add_pole(x + 104, 32)
+    add_cable(
+      x + 40, -32,
+      x + 104, -32
+    )
+    add_cactus(x + 224)
+
+    after(256, 'next')
   end,
 
   charge = function()
@@ -235,7 +284,7 @@ actions = {
     parallax(2)
 
     --sfx(3)
-    --after(2^6, 'charge_limit')
+    --after(64, 'charge_limit')
     can_charge = false
   end,
 
@@ -243,10 +292,6 @@ actions = {
     if trick == 'charge' then
       actions.grab()
     end
-  end,
-
-  cooloff = function()
-    ollie_cooloff = false
   end,
 
   destroy_cactus = function(cactus)
@@ -257,7 +302,7 @@ actions = {
       cacti[1].offset[2] -
       cacti[1].size[2] - 4
     )
-    parallax(1)
+    --parallax(1)
     cactus.alive = false
     cactus.died = frame
     trex.vector[2] = -4
@@ -272,7 +317,7 @@ actions = {
       cars[1].offset[2] -
       cars[1].size[2]
     )
-    parallax(1)
+    --parallax(1)
     trex.vector[2] = -4
   end,
 
@@ -292,6 +337,7 @@ actions = {
 
     for i,pole in pairs(poles) do
       if pole.offset[1] < foreground.offset[1] - 64 then
+        poles[i] = nil
         del(poles, poles[i])
       end
     end
@@ -313,7 +359,7 @@ actions = {
   end,
 
   grind = function()
-    parallax(1)
+    parallax(2)
     trick = 'grind'
     trex.offset[1] = ceil(trex.offset[1])
     trex.offset[2] = groundlevel
@@ -322,22 +368,18 @@ actions = {
 
   land = function()
     if trex.alive then
-      cooloff_time = 2^2
       if trick == 'grab' then
         sfx(3)
         shake_frames = 20
       else
-        cooloff_time = 2^4
         sfx(1)
       end
       trick = 'push'
     end
-    --ollie_cooloff = true
 
     parallax(1)
     trex.offset[2] = 0
     trex.vector[2] = 0
-    after(cooloff_time, 'cooloff')
   end,
 
   next = function()
@@ -345,12 +387,9 @@ actions = {
     del(script, action)
     add(eventloop, action)
 
-    if flr(rnd(2)) == 1 then
-      add(script, 'cactus')
-    else
-      add(script, 'cactus')
-      add(script, 'add_pole')
-    end
+    key = flr(rnd(#set_pieces)) + 1
+    printh(key)
+    add(script, set_pieces[key])
   end,
 
   add_pole = function()
@@ -361,7 +400,7 @@ actions = {
     if #poles > 0 then
       poles = nil
       poles = {}
-      after(2^4, 'next')
+      after(16, 'next')
       return
     end
 
@@ -369,15 +408,14 @@ actions = {
 
     for i = 0,2 do
       add(poles, {
-        offset = { nextx + i * 64, -32 },
+        offset = { nextx + i * 64, -3 },
         size = { 8, 32 },
       })
     end
-    after(2^4, 'next')
+    after(16, 'next')
   end,
 
   pop = function()
-    --if ollie_cooloff or can_pop == false then
     if can_pop == false then
       return
     end
@@ -396,6 +434,44 @@ actions = {
     trick = 'ollie'
   end,
 
+  quad_cactus = function()
+    if mode != 'play' or paused then
+      return
+    end
+
+    x = trex.offset[1] + 120
+    add_cactus(x + 0)
+    add_cactus(x + 32)
+    add_cactus(x + 96)
+    add_cactus(x + 128)
+
+    after(200, 'next')
+  end,
+
+  rail_gap = function()
+    if mode != 'play' or paused then
+      return
+    end
+
+    x = trex.offset[1] + 120
+
+    add_pole(x + 0, 32)
+    add_pole(x + 64, 32)
+    add_cable(
+      x + 0, -32,
+      x + 64, -32
+    )
+    add_cactus(x + 128)
+    add_pole(x + 192, 32)
+    add_pole(x + 256, 32)
+    add_cable(
+      x + 192, -32,
+      x + 256, -32
+    )
+
+    after(200, 'next')
+  end,
+
   start_overtake = function()
     if mode == 'play' and paused == false then
       overtaking = true
@@ -406,8 +482,8 @@ actions = {
         size = { 21, 8 },
         vector = { s, 0 },
       })
-      after(2^5, 'next')
-      --after(2^7 + 2^6, 'end_overtake')
+      after(16, 'next')
+      --after(128 + 64, 'end_overtake')
       sfx(9, 2)
     end
   end,
@@ -426,9 +502,11 @@ actions = {
     trex.offset[1] = foreground.offset[1] + trex.size[1]
 
     --add(script, 'start_ram')
-    add(script, 'add_pole')
-    add(script, 'start_overtake')
-    add(script, 'cactus')
+    add(script, 'rail_gap')
+    add(script, 'cactus_rail')
+    --add(script, 'add_pole')
+    --add(script, 'start_overtake')
+    --add(script, 'cactus')
     add(eventloop, 'next')
   end,
 
@@ -442,13 +520,13 @@ actions = {
         size = { 21, 8 },
         vector = { s, 0 },
       })
-      after(2^6, 'end_ram')
+      after(64, 'end_ram')
     end
   end,
 
   end_ram = function()
     sfx(-2, 3)
-    after(2^5, 'next')
+    after(32, 'next')
   end,
 
   release = function()
@@ -457,7 +535,6 @@ actions = {
 
   reset = function()
     score = 0
-    ollie_cooloff = false
     trick = 'push'
     mode = 'attract'
     paused = false
@@ -478,6 +555,11 @@ actions = {
       del(poles, k)
       del(poles, poles[k])
     end
+    for k,v in pairs(cables) do
+      del(cables, k)
+      del(cables, poles[k])
+    end
+
 
     timeouts = nil
     timeouts = {}
@@ -496,6 +578,9 @@ actions = {
 
     script = nil
     script = {}
+
+    cables = nil
+    cables = {}
 
     groundlevel = 0
     trex.alive = true
@@ -530,10 +615,10 @@ function parallax(speed)
     sky.vector[1] = 0.5
   elseif speed == 2 then
     trex.vector[1] = 2
-    foreground.vector[1] = 2
-    nearground.vector[1] = nearground.vector[1] + 0.5
-    cityscape.vector[1] = cityscape.vector[1] + 0.5
-    sky.vector[1] = sky.vector[1] + 0.5
+    foreground.vector[1] = trex.vector[1]
+    nearground.vector[1] = 1.5
+    cityscape.vector[1] = 1.5
+    sky.vector[1] = 1
   end
 end
 
@@ -638,6 +723,7 @@ render = {
       end
     end
 
+    draw_cables()
     for pole in all(poles) do
       --h = hitboxes.cactus(cactus)
       --rectfill(
@@ -649,7 +735,6 @@ render = {
       --)
       draw_pole(pole)
     end
-    draw_cables()
 
     if mode == 'play' then
       --h = hitboxes.trex()
@@ -772,28 +857,31 @@ end
 
 function draw_pole(pole)
   draw('pole', {
-    pole.offset[1] - pole.size[1] / 2,
-    pole.offset[2] + pole.size[2] - 2,
+    pole.offset[1] - 3,
+    pole.offset[2] - pole.size[2] + 6
   })
+  line(
+    pole.offset[1],
+    pole.offset[2],
+    pole.offset[1],
+    pole.offset[2] - pole.size[2] + 6,
+    13
+  )
 end
 
 function draw_cables()
-  for i,pole in pairs(poles) do
-    if i == #poles then
-      return
-    end
-
+  for c in all(cables) do
     tx = trex.offset[1]
-    x0 = poles[i].offset[1]
-    y0 = poles[i].offset[2]
-    x1 = poles[(i+1)].offset[1]
-    y1 = poles[i+1].offset[2]
+    x1 = c[1]
+    y1 = c[2]
+    x2 = c[3]
+    y2 = c[4]
 
-    if tx > x0 and tx < x1 and trick == 'grind' then
-      line(x0, y0, tx, groundlevel - 2, 5)
-      line(tx, groundlevel - 2, x1, y1, 5)
+    if tx > x1 and tx < x2 and trick == 'grind' then
+      line(x1, y1, tx, groundlevel - 2, 5)
+      line(tx, groundlevel - 2, x2, y2, 5)
     else
-      line(x0, y0, x1, y1, 5)
+      line(x1, y1, x2, y2, 5)
     end
   end
 end
@@ -804,7 +892,7 @@ function draw_car(car)
     sprite_n = 1
   else
     direction = 'left'
-    sprite_n = loop(2^5, 2) + 1
+    sprite_n = loop(32, 2) + 1
   end
   sprite_id = 'car_' .. direction .. '_' .. sprite_n
   draw(sprite_id, car.offset)
@@ -816,7 +904,7 @@ function draw_trex()
   elseif trick == 'none' then
     sprite_name = 'roll_1'
   elseif trick == 'push' then
-    sprite_n = loop(2^5, 5) + 1
+    sprite_n = loop(32, 5) + 1
     sprite_name = 'push_'..sprite_n
   elseif trick == 'pop' then
     sprite_name = 'ollie_1'
@@ -843,7 +931,7 @@ function draw_trex()
   end
 
   if trick == 'grind' then
-    spark = 'sparks_' .. loop(2^5, 7) + 1
+    spark = 'sparks_' .. loop(32, 7) + 1
     draw(spark, {
       ceil(trex.offset[1]) - 2,
       trex.offset[2],
@@ -1006,7 +1094,7 @@ function gravity()
     return
   end
 
-  air = abs(trex.offset[2]) / 2^7
+  air = abs(trex.offset[2]) / 128
 
   if trick == 'charge' then
     --nothing lol
@@ -1033,26 +1121,26 @@ function gravity()
 end
 
 function update_groundlevel()
-  for i,pole in pairs(poles) do
-    if i == #poles then
-      groundlevel = 0
-      return
-    end
-    p1 = poles[i]
-    p2 = poles[i+1]
+  for c in all(cables) do
+    x1 = c[1]
+    y1 = c[2]
+    x2 = c[3]
+    y2 = c[4]
+
     tx = trex.offset[1]
     ty = trex.offset[2] -- trex.size[2]
-    x0 = p1.offset[1]
-    y0 = p1.offset[2]
-    x1 = p2.offset[1]
-    if tx >= x0 and tx <= x1 then
+
+    if tx >= x1 and tx <= x2 then
+      p1 = { offset = {x1, y1} }
+      p2 = { offset = {x2, y2} }
       buckle = cable_buckle(p1, p2)
-      if trick == 'grind' or ty <= y0 + buckle + 1 then
-        groundlevel = y0 + buckle
+      if trick == 'grind' or ty <= y1 + buckle + 1 then
+        groundlevel = y1 + buckle
         return
       end
     end
   end
+  groundlevel = 0
 end
 
 hitboxes = {
@@ -1143,7 +1231,7 @@ end
 
 function dispatch(action)
   if actions[action] ~= nil then
-    printh(action)
+    ----printh(action)
     actions[action]()
   end
 end
@@ -1205,6 +1293,23 @@ end
 -- anything --------------------
 
 
+kb_chars=" !\"#$%&'()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+function getchar()
+  local n=0
+  local i=0
+  for i=0,5 do
+    if btn(i,7) then
+      n+=2^i
+    end
+  end
+  if(btn(0,6)) then
+    n+=63
+  end
+  if (n==0) then
+    return nil
+  end
+  return sub(kb_chars,n,n)
+end
 
 __gfx__
 00000000888800000000000088880000000000008888000000000000000000000000000000000000000000000000000000000000888800000000000000000000
@@ -1239,14 +1344,14 @@ __gfx__
 0cc0088088cc000000000880c000000000000880c00000000880008000888800000cc80cc070000000000000000000000000000000000000000000000a000000
 000cccccccc00000000000cc07000000000000cc0700000008880000008888000000ccc000000000000000000000000000000000000000000000000000000009
 000700000700000000000000000000000000000000000000008888000000000000000070000000000000000000000000000000000000000000000000aa090a00
-111111111111111111111111111111110000b0000000900000000009000a00000000000000000000000000000000000000000000000000000000000000000000
-11111111111111111111111111111111000bbb0b0000000ba0000000000000000d00000d00000000000000000000000000000000000000000000000000000000
-222221111111111111111111111111110b0bbb0b000090bbb0b0000900ba000000d666d000000000000000000000000000000000000000000000000000000000
-2e2e21122222222222111111122222110b0bbb0b0000b0bbb0b000090bbbab00000d0d0000000000000000000000000000000000000000000000000000000000
-22222112e2ee22222211111112e2e2110b0bbb0b0000b0bbb0b0000b0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
-2e2e21222222222222221112222222210b0bbb0b0000b0bbb0b000ab0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
-2222212ee2ee222222e21122e22222220b0bbbbb000ab0bbb0b0000b0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
-222221222222222222221122222222220b0bbbb00000b0bbbbb900ab0bbb0b000000d00000000000000000000000000000000000000000000000000000000000
+111111111111111111111111111111110000b0000000900000000009000a0000d00000d000000000000000000000000000000000000000000000000000000000
+11111111111111111111111111111111000bbb0b0000000ba0000000000000000d666d0000000000000000000000000000000000000000000000000000000000
+222221111111111111111111111111110b0bbb0b000090bbb0b0000900ba000000d0d00000000000000000000000000000000000000000000000000000000000
+2e2e21122222222222111111122222110b0bbb0b0000b0bbb0b000090bbbab00000d000000000000000000000000000000000000000000000000000000000000
+22222112e2ee22222211111112e2e2110b0bbb0b0000b0bbb0b0000b0bbb0b000000000000000000000000000000000000000000000000000000000000000000
+2e2e21222222222222221112222222210b0bbb0b0000b0bbb0b000ab0bbb0b000000000000000000000000000000000000000000000000000000000000000000
+2222212ee2ee222222e21122e22222220b0bbbbb000ab0bbb0b0000b0bbb0b000000000000000000000000000000000000000000000000000000000000000000
+222221222222222222221122222222220b0bbbb00000b0bbbbb900ab0bbb0b000000000000000000000000000000000000000000000000000000000000000000
 111111111111111111111111111111110b0bbb00000ab0bbbb0000ab0bbbbb900000d00000000000000000000000000000000000000000000000000000000000
 111111111111111111111111113311330bbbbb00000ab0bbb00900ab0bbbb0000000d00000000000000000000000000000000000000000000000000000000000
 11111111111111111111131131131331000bbb00000abbbbb00000ab0bbb0a900000d00000000000000000000000000000000000000000000000000000000000
