@@ -225,7 +225,7 @@ end
 
 function add_pole(x, h)
   add(poles, {
-    offset = { x, -3 },
+    offset = { x, -2 },
     size = { 1, h },
   })
 end
@@ -596,6 +596,7 @@ actions = {
     cityscape.vector = { 1, 0 }
     sky.offset = { -10, -96 }
     sky.vector = { 0.5, 0 }
+    parallax(1)
     cls()
   end,
 
@@ -606,13 +607,13 @@ actions = {
 -- rendering -------------------
 
 function parallax(speed)
+  foreground.offset[1] = trex.offset[1] - 16
   if speed == 1 then
     trex.vector[1] = push_speed
-    foreground.offset[1] = trex.offset[1] - 16
     foreground.vector[1] = trex.vector[1]
-    nearground.vector[1] = 1
-    cityscape.vector[1] = 1
-    sky.vector[1] = 0.5
+    nearground.vector[1] = 0.5
+    cityscape.vector[1] = 0.5
+    sky.vector[1] = 0.25
   elseif speed == 2 then
     trex.vector[1] = 2
     foreground.vector[1] = trex.vector[1]
