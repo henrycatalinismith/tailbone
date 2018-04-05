@@ -131,6 +131,8 @@ combo = {}
 skull = {}
 board = {}
 died = nil
+charge_trail = {}
+grab_trail = {}
 
 trex = {}
 can_pop = true
@@ -522,6 +524,7 @@ actions = {
     sfx(8)
     trick = 'grab'
     trex.vector[2] = 7
+    grab_trail = {}
   end,
 
   grind = function()
@@ -530,6 +533,8 @@ actions = {
     trex.offset[1] = ceil(trex.offset[1])
     trex.offset[2] = groundlevel
     trex.vector[2] = 0
+    charge_trail = {}
+    grab_trail = {}
 
     add(combo, {
       text = '50-50',
@@ -539,6 +544,8 @@ actions = {
   end,
 
   land = function()
+    charge_trail = {}
+    grab_trail = {}
     if alive then
       if trick == 'grab' then
         sfx(3)
@@ -656,15 +663,16 @@ actions = {
 
     x = trex.offset[1] + 120
 
-    add_pole(x + 0, 32)
+    half = frames_per_beat / 2
+    add_pole(x - half, 32)
 
     last_x = x
     for i = 1,6 do
       next_x = x + frames_per_beat * 2 * i
-      add_pole(next_x, 32)
+      add_pole(next_x - half, 32)
       add_cable(
-        last_x, -32,
-        next_x, -32
+        last_x - half, -32,
+        next_x - half, -32
       )
       last_x = next_x
     end
@@ -729,11 +737,11 @@ actions = {
 
     --add(script, 'start_ram')
     --add(script, 'cactus_lava_gap')
-    --add(script, 'rail_gap')
+    add(script, 'rail_gap')
     --add(script, 'cactus_rail')
     --add(script, 'add_pole')
     --add(script, 'start_overtake')
-    add(script, 'cactus_lava_gap')
+    --add(script, 'cactus_lava_gap')
     add(eventloop, 'next')
     every(frames_per_bar, 'increment_score')
   end,
@@ -816,6 +824,8 @@ actions = {
     script = {}
     cables = {}
     lava = {}
+    charge_trail = {}
+    grab_trail = {}
 
     groundlevel = 0
     alive = true
@@ -1195,7 +1205,7 @@ end
 function draw_pole(pole)
   draw('pole', {
     pole.offset[1] - 3,
-    pole.offset[2] - pole.size[2] + 8
+    pole.offset[2] - pole.size[2] + 10
   })
   line(
     pole.offset[1],
@@ -1209,10 +1219,10 @@ end
 function draw_cables()
   for c in all(cables) do
     tx = trex.offset[1]
-    x1 = c[1]
-    y1 = c[2]
-    x2 = c[3]
-    y2 = c[4]
+    x1 = c[1] + 3
+    y1 = c[2] + 1
+    x2 = c[3] - 3
+    y2 = c[4] + 1
 
     if tx > x1 and tx < x2 and trick == 'grind' then
       line(x1, y1, tx, groundlevel - 2, 5)
@@ -1259,6 +1269,12 @@ function draw_trex()
   board_sprite = 'board_flat'
   head_offset = { 0, 0 }
   board_offset = { 2, 2 }
+
+  offsets = {{
+    trex.offset[1],
+    trex.offset[2],
+  }}
+
   if alive == false then
     face_sprite = 'dead_1'
     head_offset[1] = 0
@@ -1335,43 +1351,58 @@ function draw_trex()
   end
 
   if trick == 'grind' then
-    spark = 'sparks_' .. loop(frames_per_beat / 2, 7) + 1
+    spark = 'sparks_' .. 8 - (loop(frames_per_beat, 7) + 1)
     draw(spark, {
       ceil(trex.offset[1]) - 2,
       trex.offset[2],
     })
-    draw(spark, {
-      ceil(trex.offset[1]) + 6,
-      trex.offset[2],
-    })
+    --draw(spark, {
+      --ceil(trex.offset[1]) + 4,
+      --trex.offset[2],
+    --})
   end
 
-  draw(tail_sprite, {
-    ceil(trex.offset[1]) - 1,
-    trex.offset[2] - 3 + head_bob,
-  })
-
-  draw('arm', {
-    ceil(trex.offset[1]) + 4,
-    trex.offset[2] - 2 + head_bob,
-  })
-
-  draw(board_sprite, {
-    ceil(trex.offset[1]) + board_offset[1],
-    trex.offset[2] + board_offset[2],
-  })
-
-  if legs_sprite then
-    draw(legs_sprite, {
-      ceil(trex.offset[1]) + 1,
-      trex.offset[2],
-    })
+  for t in all(charge_trail) do
+    r = 4 - max(0, (frame-t[3])/4)
+    drop = (frame-t[3])/1000
+    circfill(t[1]+8, t[2]-8+drop, r, 7)
   end
 
-  draw(face_sprite, {
-    ceil(trex.offset[1]) + 7 + head_offset[1],
-    trex.offset[2] - 8 + head_bob + head_offset[2],
-  })
+  for t in all(grab_trail) do
+    ro = 7 - max(0, (frame - t[3])*1.4)
+    ry = 6 - max(0, (frame - t[3])*2)
+    circfill(t[1]+6, t[2]-8, ro, 9)
+    circfill(t[1]+6, t[2]-8, ry, 10)
+  end
+
+  for o in all(offsets) do
+    draw(tail_sprite, {
+      ceil(o[1]) - 1,
+      o[2] - 3 + head_bob,
+    })
+
+    draw('arm', {
+      ceil(o[1]) + 4,
+      o[2] - 2 + head_bob,
+    })
+
+    draw(board_sprite, {
+      ceil(o[1]) + board_offset[1],
+      o[2] + board_offset[2],
+    })
+
+    if legs_sprite then
+      draw(legs_sprite, {
+        ceil(o[1]) + 1,
+        o[2],
+      })
+    end
+
+    draw(face_sprite, {
+      ceil(o[1]) + 7 + head_offset[1],
+      o[2] - 8 + head_bob + head_offset[2],
+    })
+  end
 
 end
 
@@ -1585,7 +1616,7 @@ function update_groundlevel()
     x2 = c[3]
     y2 = c[4]
 
-    if tx >= x1 and tx <= x2 then
+    if tx+8 >= x1 and tx <= x2 then
       p1 = { offset = {x1, y1} }
       p2 = { offset = {x2, y2} }
       buckle = cable_buckle(p1, p2)
@@ -1710,6 +1741,23 @@ function move()
       actions.grind()
     end
   end
+
+  if trick == 'charge' and flr(trex.offset[1]) % 8 == 0 then
+    add(charge_trail, {
+      trex.offset[1],
+      trex.offset[2],
+      frame,
+    })
+  end
+
+  if trick == 'grab' and flr(trex.offset[1]) % 2 == 0 and trex.offset[2] < -8 then
+    add(grab_trail, {
+      trex.offset[1],
+      trex.offset[2],
+      frame,
+    })
+  end
+
 end
 
 
