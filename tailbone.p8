@@ -1222,12 +1222,13 @@ end
 function draw_cables()
   for c in all(cables) do
     tx = trex.offset[1]
+    ty = trex.offset[2]
     x1 = c[1] + 3
     y1 = c[2] + 1
     x2 = c[3] - 3
     y2 = c[4] + 1
 
-    if tx > x1 and tx < x2 and trick == 'grind' then
+    if tx > x1 and tx < x2 and ty >= y1 + 1 and trick == 'grind' then
       line(x1, y1, tx, groundlevel - 2, 5)
       line(tx, groundlevel - 2, x2, y2, 5)
     else
