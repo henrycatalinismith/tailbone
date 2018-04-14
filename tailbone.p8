@@ -1372,26 +1372,29 @@ function draw_trex()
       age = frame - t[3]
       from = {t[1], t[2]}
       to = {charge_trail[i+1][1],charge_trail[i+1][2]}
-      raggedy = (charge / 32) * 4
+      raggedy = (charge / 32) * 6
       --drop =
-      --ru1 = 3.14159 / 32
-      --run = ru1 * (age+8) / 10
-      --drop = -1* sin(run) * 3
-      drop = 0
+      ru1 = 3.14159 / 32
+      run = ru1 * (age+8) / 10
+      drop = -1* sin(run) * 6
+      fl = function(n) return from[2] - n + drop - 2 end
+      tl = function(n) return to[2] - n + drop - 2 end
+      --drop = 0
 
       if age < raggedy and charge > 10 then
-        line(from[1], from[2] - 5 + drop, to[1], to[2] - 5 + drop, 8)
-        line(from[1], from[2] - 4 + drop, to[1], to[2] - 4 + drop, 9)
-        line(from[1], from[2] - 3 + drop, to[1], to[2] - 3 + drop, 10)
-        line(from[1], from[2] - 2 + drop, to[1], to[2] - 2 + drop, 11)
-        line(from[1], from[2] - 1 + drop, to[1], to[2] - 1 + drop, 12)
-        line(from[1], from[2] - 0 + drop, to[1], to[2] - 0 + drop, 14)
-      elseif age < 8 then
-        circfill(from[1], from[2] - 5+drop, flrrnd(2), 8)
-        circfill(from[1], from[2] - 4+drop, flrrnd(2), 9)
-        circfill(from[1], from[2] - 3+drop, flrrnd(2), 10)
-        circfill(from[1], from[2] - 2+drop, flrrnd(2), 11)
-        circfill(from[1], from[2] - 1+drop, flrrnd(2), 12)
+        line(from[1]+5, fl(5), to[1]+5, tl(5), 8)
+        line(from[1]+4, fl(4), to[1]+4, tl(4), 9)
+        line(from[1]+3, fl(3), to[1]+3, tl(3), 10)
+        line(from[1]+2, fl(2), to[1]+2, tl(2), 11)
+        line(from[1]+1, fl(1), to[1]+1, tl(1), 12)
+        --line(from[1], fl(0), to[1], tl(0), 14)
+        --line(from[1], from[2] - 0 + drop, to[1], to[2] - 0 + drop, 14)
+      elseif age < 6 then
+        circfill(from[1]+5, fl(5), flrrnd(2), 8)
+        circfill(from[1]+4, fl(4), flrrnd(2), 9)
+        circfill(from[1]+3, fl(3), flrrnd(2), 10)
+        circfill(from[1]+2, fl(2), flrrnd(2), 11)
+        circfill(from[1]+1, fl(1), flrrnd(2), 12)
         --circfill(from[1], from[2] - 0+drop, flrrnd(2), 14)
       end
     end
