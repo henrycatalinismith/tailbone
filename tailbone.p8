@@ -79,7 +79,7 @@ function input()
       elseif trick == 'air' and trex.vector[2] <= 1.4 then
         actions.charge()
       elseif trick == 'charge' and charge > max_charge then
-        actions.grab()
+        actions.meteor()
       elseif trick == 'grind' then
         actions.pop()
       end
@@ -93,8 +93,8 @@ function input()
       elseif trick == 'ollie' then
         actions.release()
       elseif trick == 'charge' then --and charge > min_charge then
-        actions.grab()
-      elseif trick == 'grab' then
+        actions.meteor()
+      elseif trick == 'meteor' then
         can_charge = true
       elseif trick == 'grind' then
         can_pop = true
@@ -132,13 +132,14 @@ skull = {}
 board = {}
 died = nil
 charge_trail = {}
-grab_trail = {}
+meteor_trail = {}
 
 trex = {}
+has_grabbed = false
 can_pop = true
 can_charge = true
 min_charge = 2
-max_charge = 32
+max_charge = 64
 overtaking = false
 cue_jump = false
 groundlevel = 0
@@ -163,7 +164,7 @@ tricks = {
   'pop',
   'ollie',
   'charge',
-  'grab',
+  'meteor',
   'grind',
   'roll',
 }
@@ -174,7 +175,7 @@ is_attack = {
   pop = false,
   ollie = false,
   charge = true,
-  grab = true,
+  meteor = true,
   grind = false,
   roll = false,
 }
@@ -414,20 +415,12 @@ actions = {
     if trick == 'chrage' or can_charge == false then
       return
     end
-    --clear('charge_limit')
     trick = 'charge'
     charge = 0
     trex.vector[2] = -0.5
 
-    --sfx(3)
-    --after(64, 'charge_limit')
+    sfx(20)
     can_charge = false
-  end,
-
-  charge_limit = function()
-    if trick == 'charge' then
-      actions.grab()
-    end
   end,
 
   destroy_cactus = function(cactus)
@@ -442,6 +435,7 @@ actions = {
     cactus.alive = false
     cactus.died = frame
     trex.vector[2] = -4
+    charge_trail = {}
     add(combo, {
       text = 'meteor strike',
       frame = frame,
@@ -523,8 +517,17 @@ actions = {
   grab = function()
     sfx(8)
     trick = 'grab'
+    charge_trail = {}
+    --trex.vector[2] = 7
+    --meteor_trail = {}
+  end,
+
+  meteor = function()
+    sfx(8)
+    trick = 'meteor'
     trex.vector[2] = 7
-    grab_trail = {}
+    --charge_trail = {}
+    meteor_trail = {}
   end,
 
   grind = function()
@@ -534,7 +537,7 @@ actions = {
     trex.offset[2] = groundlevel
     trex.vector[2] = 0
     charge_trail = {}
-    grab_trail = {}
+    meteor_trail = {}
 
     add(combo, {
       text = '50-50',
@@ -545,9 +548,9 @@ actions = {
 
   land = function()
     charge_trail = {}
-    grab_trail = {}
+    meteor_trail = {}
     if alive then
-      if trick == 'grab' then
+      if trick == 'meteor' then
         sfx(3)
         shake_frames = 20
       else
@@ -825,7 +828,7 @@ actions = {
     cables = {}
     lava = {}
     charge_trail = {}
-    grab_trail = {}
+    meteor_trail = {}
 
     groundlevel = 0
     alive = true
@@ -1322,7 +1325,7 @@ function draw_trex()
     legs_sprite = 'roll_1'
     board_sprite = 'board_flat'
     board_offset[1] = 2
-  elseif trick == 'grab' then
+  elseif trick == 'meteor' then
     face_sprite = 'growl'
     legs_sprite = 'grab_1'
     board_sprite = 'board_high'
@@ -1342,12 +1345,12 @@ function draw_trex()
 
   if trick == 'charge' then
     --print(charge .. '', 3, 3, 7)
-    circ(
-      ceil(trex.offset[1]) + 8,
-      trex.offset[2] - 8,
-      charge / 3,
-      10
-    )
+    --circ(
+      --ceil(trex.offset[1]) + 8,
+      --trex.offset[2] - 8,
+      --charge / 3,
+      --10
+    --)
   end
 
   if trick == 'grind' then
@@ -1362,13 +1365,32 @@ function draw_trex()
     --})
   end
 
-  for t in all(charge_trail) do
-    r = 4 - max(0, (frame-t[3])/4)
-    drop = (frame-t[3])/1000
-    circfill(t[1]+8, t[2]-8+drop, r, 7)
+  for i,t in pairs(charge_trail) do
+    --r = 4 - max(0, (frame-t[3])/4)
+    r = 1
+    if t != charge_trail[#charge_trail] then
+      age = frame - t[3]
+      from = {t[1], t[2]}
+      to = {charge_trail[i+1][1],charge_trail[i+1][2]}
+      if age < 4 then
+        line(from[1], from[2] - 5, to[1], to[2] - 5, 8)
+        line(from[1], from[2] - 4, to[1], to[2] - 4, 9)
+        line(from[1], from[2] - 3, to[1], to[2] - 3, 10)
+        line(from[1], from[2] - 2, to[1], to[2] - 2, 11)
+        line(from[1], from[2] - 1, to[1], to[2] - 1, 12)
+        line(from[1], from[2] - 0, to[1], to[2] - 0, 14)
+      elseif age < 6 then
+        circfill(from[1], from[2] - 5, flrrnd(2), 8)
+        circfill(from[1], from[2] - 4, flrrnd(2), 9)
+        circfill(from[1], from[2] - 3, flrrnd(2), 10)
+        circfill(from[1], from[2] - 2, flrrnd(2), 11)
+        circfill(from[1], from[2] - 1, flrrnd(2), 12)
+        circfill(from[1], from[2] - 0, flrrnd(2), 14)
+      end
+    end
   end
 
-  for t in all(grab_trail) do
+  for t in all(meteor_trail) do
     ro = 7 - max(0, (frame - t[3])*1.4)
     ry = 6 - max(0, (frame - t[3])*2)
     circfill(t[1]+6, t[2]-8, ro, 9)
@@ -1569,6 +1591,10 @@ function gravity()
   air = abs(trex.offset[2]) / 128
 
   if trick == 'charge' then
+    ru1 = 3.14159 / 32
+    run = ru1 * (charge+8) / 10
+    vec = sin(run) * 0.6
+    trex.vector[2] = vec
     --nothing lol
   elseif trick == 'grind' and groundlevel != 0 then
     trex.offset[2] = groundlevel
@@ -1668,7 +1694,7 @@ hitboxes = {
   end,
 
   trex = function()
-    if trick == 'grab' then
+    if trick == 'meteor' then
       return {
         offset = {
           trex.offset[1] + 2,
@@ -1742,16 +1768,17 @@ function move()
     end
   end
 
-  if trick == 'charge' and flr(trex.offset[1]) % 8 == 0 then
+  --if trick == 'charge' and flr(trex.offset[1]) % 8 == 0 then
+  if trick == 'charge' then
     add(charge_trail, {
-      trex.offset[1],
-      trex.offset[2],
+      trex.offset[1] + 6,
+      trex.offset[2] - 1,
       frame,
     })
   end
 
-  if trick == 'grab' and flr(trex.offset[1]) % 2 == 0 and trex.offset[2] < -8 then
-    add(grab_trail, {
+  if trick == 'meteor' and flr(trex.offset[1]) % 2 == 0 and trex.offset[2] < -8 then
+    add(meteor_trail, {
       trex.offset[1],
       trex.offset[2],
       frame,
@@ -1832,6 +1859,13 @@ end
 --------------------------------
 -- anything --------------------
 
+function flrrnd(n)
+  return flr(rnd(n))
+end
+
+function choose(table)
+  return table[flrrnd(#table) + 1]
+end
 
 kb_chars=" !\"#$%&'()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 function getchar()
@@ -2001,7 +2035,7 @@ __sfx__
 01100000176152f6052f605240002b6152b6052b6150c000176150c0052b615240052b6152b605240050c005176150c00517605240052b6152b6052b6150c000176150c0052b615240052b6152b6052b6002b600
 01030000157301a7401a7401574015740157301573015730157301572015720157100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100000176152b6052b6152b615176152b6052b6152b6150f7500a7520b7520675205752057520575205755176050000517605000052b605376050000500005176050000500005000052b6052b6052b6002b600
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01100000187201a7201d7200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
