@@ -76,11 +76,15 @@ function input()
         actions.pop()
       elseif trick == 'pop' then
         actions.ollie()
-      elseif trick == 'air' and trex.vector[2] <= 1.4 then
+      elseif trick == 'air' then
         actions.charge()
       elseif trick == 'charge' and charge > max_charge then
+        --actions.pop()
+        can_pop = false
         actions.meteor()
       elseif trick == 'grind' then
+        actions.pop()
+      elseif trick == 'meteor' then
         actions.pop()
       end
     else
@@ -117,10 +121,22 @@ frames_per_beat = 33
 frames_per_bar = 128
 frames_per_phrase = 254
 
+function bm(n) return ((n-1)*33)/1 end
+function bt(n) return n*16 end
+function bar(n) return (n-1) * 128 end
+function phrase(n) return (n-1) * 254 end
+function beat(n) return (n-1) * 33 end
+function bar(n) return (n-1) * 128 end
+function phrase(n) return (n-1) * 254 end
+function beats(n) return n * 33 end
+function bars(n) return n * 128 end
+function phrases(n) return n * 254 end
+
 mode = 'attract'
 score = 0
 paused = false
 alive = false
+jump = false
 
 frame = 0
 timeouts = {}
@@ -149,6 +165,7 @@ push_speed = 1
 roll_limit = 5
 roll_count = 0
 last_score = 0
+meteor_start_height = 0
 
 shake_frames = 0
 
@@ -302,6 +319,56 @@ sprites = {
 
 }
 
+spots = {
+  cactus_lava_gap = {
+    length = bt(16),
+    cacti = {
+      bm(3), bm(5),
+      --beat(7), beat(8),
+      bm(11), bm(13),
+      --beat(15), beat(16),
+    },
+    lava = {
+      {bm(3)+8, bm(5)-2},
+      {bm(11)+8, bm(13)-2},
+    }
+  },
+
+  cactus_rail = {
+    length = beats(8),
+    cacti = {
+      beat(1),
+    }
+  }
+}
+
+    --if mode != 'play' or paused then
+      --return
+    --end
+    --x = trex.offset[1] + 120
+    --add_cactus(x)
+    --add_pole(x + 40, 32)
+    --add_pole(x + 104, 32)
+    --add_cable(
+      --x + 40, -32,
+      --x + 104, -32
+    --)
+    --add_cactus(x + 224)
+    --after(frames_per_phrase, 'next')
+  --end,
+--
+
+
+function cue_spot(spot)
+  x = trex.offset[1] + 128
+  for c in all(spot.cacti) do
+    add_cactus(x + c - beats(2))
+  end
+  for l in all(spot.lava) do
+    add_lava(x+l[1] - beats(2), x+l[2] - beats(2))
+  end
+end
+
 function add_cactus(x)
   add(cacti, {
     offset = { x, 0 },
@@ -331,11 +398,11 @@ end
 
 set_pieces = {
   'cactus_lava_gap',
-  'cactus_rail',
-  'quad_cactus',
-  'cactus',
+  --'cactus_rail',
+  --'quad_cactus',
+  --'cactus',
   --'nothing',
-  'rail_gap',
+  --'rail_gap',
 }
 
 soundtracks = {
@@ -371,44 +438,15 @@ actions = {
   end,
 
   cactus_lava_gap = function()
-    x = trex.offset[1] + 128
-
-    add_cactus(x + 0)
-    add_lava(
-      x + 8,
-      (x + frames_per_beat * 2) - 0
-    )
-    add_cactus(x + frames_per_beat * 2)
-
-    add_cactus(x + frames_per_beat * 5)
-
-    add_cactus(x + frames_per_phrase)
-    add_lava(
-      x + frames_per_phrase + 8,
-      ((x+frames_per_phrase) + frames_per_beat * 2) - 0
-    )
-    add_cactus((x+frames_per_phrase) + frames_per_beat * 2)
-
-    after(frames_per_phrase, 'next')
+    spot = spots.cactus_lava_gap
+    cue_spot(spot)
+    after(spot.length, 'next')
   end,
 
   cactus_rail = function()
-    if mode != 'play' or paused then
-      return
-    end
-
-    x = trex.offset[1] + 120
-
-    add_cactus(x)
-    add_pole(x + 40, 32)
-    add_pole(x + 104, 32)
-    add_cable(
-      x + 40, -32,
-      x + 104, -32
-    )
-    add_cactus(x + 224)
-
-    after(frames_per_phrase, 'next')
+    spot = spots.cactus_rail
+    cue_spot(spot)
+    after(spot.length, 'next')
   end,
 
   charge = function()
@@ -418,15 +456,27 @@ actions = {
     trick = 'charge'
     charge = 0
     trex.vector[2] = -0.5
+    --can_pop = true
 
-    sfx(20)
+    sfx(20, 0)
     can_charge = false
   end,
 
   destroy_cactus = function(cactus)
+    sfx(-1, 0)
     sfx(0)
     shake_frames = 10
+    if trick == 'charge' then
+      --add(eventloop, 'pop')
+    end
+    if trick == 'meteor' then
+      trex.vector[2] = meteor_start_height/14
+    else
+      trex.vector[2] = -4
+    end
     trick = 'air'
+    can_charge = false
+    after(16, 'enable_charge')
     trex.offset[2] = (
       cacti[1].offset[2] -
       cacti[1].size[2] - 4
@@ -434,13 +484,16 @@ actions = {
     --parallax(1)
     cactus.alive = false
     cactus.died = frame
-    trex.vector[2] = -4
     charge_trail = {}
     add(combo, {
       text = 'meteor strike',
       frame = frame,
       score = 100,
     })
+  end,
+
+  enable_charge = function()
+    can_charge = true
   end,
 
   destroy_car = function()
@@ -523,11 +576,14 @@ actions = {
   end,
 
   meteor = function()
-    sfx(8)
+    sfx(-1, 0)
+    sfx(8, 0)
     trick = 'meteor'
     trex.vector[2] = 7
     --charge_trail = {}
+    --can_pop = true
     meteor_trail = {}
+    meteor_start_height = trex.offset[2]
   end,
 
   grind = function()
@@ -547,6 +603,7 @@ actions = {
   end,
 
   land = function()
+    sfx(-1, 3)
     charge_trail = {}
     meteor_trail = {}
     if alive then
@@ -626,15 +683,18 @@ actions = {
     if can_pop == false then
       return
     end
-    if trick == 'grind' then
+    if trick == 'charge' then
+      trex.vector[2] = -9
+    elseif trick == 'grind' then
       trex.vector[2] = -4
     else
       trex.vector[2] = -3.2
     end
     trick = 'pop'
 
-    sfx(0)
+    sfx(0, 0)
     can_pop = false
+    can_charge = true
   end,
 
   push = function()
@@ -738,15 +798,17 @@ actions = {
     mode = 'play'
     trex.offset[1] = foreground.offset[1] + trex.size[1]
 
+    add(script, 'cactus_lava_gap')
+    add(eventloop, 'next')
+    every(frames_per_bar, 'increment_score')
+
     --add(script, 'start_ram')
     --add(script, 'cactus_lava_gap')
-    add(script, 'rail_gap')
+    --add(script, 'rail_gap')
     --add(script, 'cactus_rail')
     --add(script, 'add_pole')
     --add(script, 'start_overtake')
-    --add(script, 'cactus_lava_gap')
-    add(eventloop, 'next')
-    every(frames_per_bar, 'increment_score')
+    --add(script, 'cactus_rail')
   end,
 
   increment_score = function()
@@ -1392,9 +1454,9 @@ function draw_trex()
         --line(from[1], from[2] - 0 + drop, to[1], to[2] - 0 + drop, 14)
       elseif age < 6 then
         circfill(from[1]+5, fl(5), flrrnd(2), 8)
-        circfill(from[1]+4, fl(4), flrrnd(2), 9)
-        circfill(from[1]+3, fl(3), flrrnd(2), 10)
-        circfill(from[1]+2, fl(2), flrrnd(2), 11)
+        --circfill(from[1]+4, fl(4), flrrnd(2), 9)
+        --circfill(from[1]+3, fl(3), flrrnd(2), 10)
+        --circfill(from[1]+2, fl(2), flrrnd(2), 11)
         circfill(from[1]+1, fl(1), flrrnd(2), 12)
         --circfill(from[1], from[2] - 0+drop, flrrnd(2), 14)
       end
@@ -1548,9 +1610,12 @@ function physics()
     for cactus in all(cacti) do
       c = hitboxes.cactus(cactus)
       if intersect(t, c) then
-        if is_attack[trick] then
+        if jump or is_attack[trick] then
+          if jump then
+            can_charge = false
+          end
           actions.destroy_cactus(cactus)
-        else
+        elseif cactus.alive == true then
           add(eventloop, 'gameover')
         end
       end
@@ -1620,11 +1685,41 @@ function gravity()
   elseif trex.vector[2] < 0.5 and trick == 'ollie' then
     --hang
     trex.vector[2] = trex.vector[2] + 0.25 * 0.1
+  elseif trick == 'meteor' then
+    speedup = false
+    nearest = true
+    height = 0-trex.offset[2]
+    for c in all(cacti) do
+      ahead = c.offset[1] > trex.offset[1]
+      if ahead == true then
+        gap = c.offset[1] - trex.offset[1]
+        if nearest == true then
+
+          if gap < 32 and height > 32 then
+            trex.vector[2] = 8
+            speedup = true
+          elseif gap < 8 and height > 64 then
+            trex.vector[2] = 9
+            speedup = true
+          elseif gap < 8 and height > 20 then
+            trex.vector[2] = 4
+            speedup = true
+          elseif gap < 4 and height > 10 then
+            trex.vector[2] = 5
+            speedup = true
+          end
+          nearest = false
+        end
+      end
+    end
+    if speedup == false then
+      trex.vector[2] = 3
+    end
   else
     --drop
     trex.vector[2] = min(
       trex.vector[2] + 0.95 * air,
-      5
+      2.5
     )
   end
 end
@@ -1712,9 +1807,19 @@ hitboxes = {
           trex.offset[2] - trex.size[2],
         },
         size = {
-          12,
+          16,
           trex.size[2] * 1
         }
+      }
+    end
+
+    if trick == 'charge' then
+      return {
+        offset = {
+          trex.offset[1] + 2,
+          trex.offset[2] - trex.size[2] + 8,
+        },
+        size = { 16, 14 }
       }
     end
 
@@ -1869,6 +1974,10 @@ end
 -->8
 --------------------------------
 -- anything --------------------
+
+function magnitude(v)
+  return sqrt(v[1]*v[1] + v[2]*v[2])
+end
 
 function flrrnd(n)
   return flr(rnd(n))
@@ -2026,7 +2135,7 @@ d66000000677a7760000006d166000000677a77600000061166000000677a7760000006100000000
 dddd0000ddddddddd0000ddd11110000111111111000011111110000111111111000011100000000000000000000000000000000000000000000000000000000
 dddddddddddddddddddddddd11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000
 __sfx__
-000000000d51001510015200152001530015300254003540035400454004540055500555006530095200a52007200062000020000200002000020000200002000020000200002000020000200002000020000200
+000100000d51001510015200152001530015300254003540035400454004540055500555006530095200a52007200062000020000200002000020000200002000020000200002000020000200002000020000200
 0102000009010090100901009010026000260002600016000160005600016000b6000e600086010460104605026000060009600046000260009600036000a6000860004600006000860006600066000560000000
 0000000001200062000e5200e5300f5400f5400f5400f540095500955009540095400954005540055400554005530055200552001520015200152001520015200151001510042000220001200012001020000000
 01040000015100151001510005100051000510015000150001500015000150001500015001b000100001300016000190001c00021000260002b0002d0001b00020000260002c00034000380003d0003f0003f400
@@ -2046,7 +2155,7 @@ __sfx__
 01100000176152f6052f605240002b6152b6052b6150c000176150c0052b615240052b6152b605240050c005176150c00517605240052b6152b6052b6150c000176150c0052b615240052b6152b6052b6002b600
 01030000157301a7401a7401574015740157301573015730157301572015720157100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100000176152b6052b6152b615176152b6052b6152b6150f7500a7520b7520675205752057520575205755176050000517605000052b605376050000500005176050000500005000052b6052b6052b6002b600
-01100000187201a7201d7200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+011000030c5101a510185102400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
