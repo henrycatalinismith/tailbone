@@ -20,16 +20,7 @@ function _update60()
     shake_frames = shake_frames - 1
   end
 
-  if trick == 'roll' then
-    roll_count = roll_count + 1
-    if roll_count > roll_limit then
-      actions.push()
-    end
-  end
-
-  --if mode == 'play' and paused == false then
-    move()
-  --end
+  move()
   if trick == 'charge' then
     if charge == 0 then
       sfx(7)
@@ -37,13 +28,198 @@ function _update60()
       sfx(7)
     end
     charge = charge + 1
+  elseif trick == 'grind' and frame % 4 == 0 then
+    combo_score = combo_score + 5
   end
 end
 
 function _draw()
-  for layer in all(layers) do
-    render[layer]()
+  -- sky
+  x = ceil(sky.offset[1])
+  y = ceil(sky.offset[2])
+  camera(x, y)
+  rectfill(x, y, x + 128, 0, 1)
+  for star in all(stars(x)) do
+    circfill(star[1], star[2], 0, 6)
   end
+
+  -- cityscape
+  x = ceil(cityscape.offset[1])
+  y = ceil(cityscape.offset[2])
+  camera(x, y)
+  rectfill(x, 9, x + 128, 9, 2)
+  for i = (x - 15),(x + 128) do
+    if i % 98 == 0 then
+      sspr(96, 0, 5, 8, i, 1)
+    elseif i % 128 == 0 then
+      sspr(102, 0, 14, 8, i, 1)
+    elseif i % 256 == 0 then
+      sspr(118, 0, 10, 8, i, 1)
+    end
+  end
+
+  -- nearground
+  x = ceil(nearground.offset[1])
+  y = ceil(nearground.offset[2])
+  camera(x, y)
+  rectfill(x, 0, x + 128, 3, 4)
+
+  -- plants
+  for i = (x - 15),(x + 128) do
+    if i % 256 == 0 then
+      spr(28, i, -7)
+    elseif i % 128 == 0 then
+      spr(29, i, -7)
+    elseif i % 96 == 0 then
+      spr(30, i, -7)
+    elseif i % 64 == 0 then
+      spr(31, i, -7)
+    end
+  end
+
+  -- foreground
+  x = flr(foreground.offset[1])
+  y = flr(foreground.offset[2])
+
+  if shake_frames > 0 then
+    y = y + (rnd(2)-1)
+  end
+
+  camera(x, y)
+  width = 16
+  tiles = 128 / width
+
+  rectfill(x, 0, x + 128, 64, 4)
+
+  for i = (x - 15),(x + 128) do
+    if i % 16 == 0 then
+      sspr(96, 21, 16, 17, i, -1);
+    end
+  end
+
+  draw_lava()
+
+  draw_cables()
+  for pole in all(poles) do
+    --h = hitboxes.cactus(cactus)
+    --rectfill(
+      --h.offset[1],
+      --h.offset[2],
+      --h.offset[1] + h.size[1],
+      --h.offset[2] + h.size[2],
+      --14
+    --)
+    draw_pole(pole)
+  end
+
+  if mode == 'play' and alive then
+    --h = hitboxes.trex()
+    --rectfill(
+      --h.offset[1],
+      --h.offset[2],
+      --h.offset[1] + h.size[1],
+      --h.offset[2] + h.size[2],
+      --14
+    --)
+    draw_trex()
+  end
+
+  for cactus in all(cacti) do
+    --h = hitboxes.cactus(cactus)
+    --rectfill(
+      --h.offset[1],
+      --h.offset[2],
+      --h.offset[1] + h.size[1],
+      --h.offset[2] + h.size[2],
+      --14
+    --)
+    draw_cactus(cactus)
+  end
+
+  for biscuit in all(biscuits) do
+    draw('biscuit', biscuit)
+  end
+
+  if mode == 'play' and alive == false then
+    draw_board()
+    draw_skull()
+  end
+
+  -- ui
+  camera(0, 0)
+
+  if mode == 'attract' then
+    spr(64, 16, 32, 12, 4)
+  end
+
+  if trick == 'charge' then
+    --print(charge .. '', 3, 3, 7)
+  end
+
+  score_x = 120 - (#(''..score)) * 4
+
+  score_colors = {0,7}
+
+  start_y = 8
+
+  if #combo > 1 then
+    last_age = frame - combo[#combo].frame
+    slide = max(0, 10 - last_age)
+    start_y = (8 - (#combo - 1) * 10) + slide
+  end
+
+  n = combo_score
+  if alive == false then
+    n = max(0, n - flr(((frame-died) / 50) * n))
+    if n == 0 then
+      combo = {}
+    end
+  end
+
+  if #combo > 0 then
+    if combo[1].landed then
+      colors = {0,11}
+    elseif combo[1].bailed then
+      colors = {0,8}
+    else
+      colors = {0,7}
+    end
+    printr(''..n, 8, 8, colors)
+  end
+
+
+  for i,t in pairs(combo) do
+    x = #(''..combo_score) * 4
+    y = start_y + ((i-1) * 10)
+
+    if t.landed then
+      age = frame - t.landed
+      text_colors = {0,11}
+      score_colors = {0,11}
+    elseif t.bailed then
+      text_colors = {0,8}
+    else
+      text_colors = {0,12}
+    end
+
+    --printr(''..t.score, x, y, {7,0})
+    printr(t.text, x + 16, y, text_colors)
+
+    if t.landed and age > 20 then
+      del(combo, t)
+      combo_score = 0
+    end
+  end
+  printr(score, score_x, 8, score_colors)
+
+  if paused == true and alive == false then
+    if frame - died > 60 then
+      dead_for = flr(min(frame - died - 60, 40) / 10 * 2)
+      sw = ({20,36,52,60,78,92,112,128})[dead_for]
+      sspr(0, 64, sw, 32, 0, 32)
+    end
+  end
+
 end
 
 function input()
@@ -63,7 +239,7 @@ function input()
 
   elseif mode == 'play' then
 
-    if trex.offset[2] > 0 then
+    if altitude > 0 then
       --return true
     end
 
@@ -123,20 +299,17 @@ frames_per_phrase = 254
 
 function bm(n) return ((n-1)*33)/1 end
 function bt(n) return n*16 end
-function bar(n) return (n-1) * 128 end
-function phrase(n) return (n-1) * 254 end
-function beat(n) return (n-1) * 33 end
-function bar(n) return (n-1) * 128 end
-function phrase(n) return (n-1) * 254 end
-function beats(n) return n * 33 end
-function bars(n) return n * 128 end
-function phrases(n) return n * 254 end
 
 mode = 'attract'
 score = 0
+combo_score = 0
 paused = false
 alive = false
 jump = false
+distance = 0
+altitude = 0
+speed = 0
+lift = 0
 
 frame = 0
 timeouts = {}
@@ -162,9 +335,6 @@ groundlevel = 0
 above_lava = 0
 above_cable = 0
 push_speed = 1
-roll_limit = 5
-roll_count = 0
-last_score = 0
 meteor_start_height = 0
 
 shake_frames = 0
@@ -173,6 +343,7 @@ cacti = {}
 poles = {}
 cables = {}
 lava = {}
+biscuits = {}
 
 tricks = {
   'none',
@@ -182,29 +353,10 @@ tricks = {
   'charge',
   'meteor',
   'grind',
-  'roll',
-}
-
-is_attack = {
-  none = false,
-  push = false,
-  pop = false,
-  ollie = false,
-  charge = true,
-  meteor = true,
-  grind = false,
-  roll = false,
 }
 
 trick = 'none'
 charge = 0
-layers = {
-  'sky',
-  'cityscape',
-  'nearground',
-  'foreground',
-  'ui',
-}
 
 foreground = {}
 nearground = {}
@@ -222,8 +374,6 @@ sprites = {
   grab_1 =  { 56, 8, 8, 8, 0, false },
   ollie_1 =  { 64, 8, 8, 8, 0, false },
 
-  dead_1 =  { 88, 8, 8, 8, 0, false },
-
   smile = {  0, 0, 8, 8, 0, false },
   yikes = {  8, 0, 8, 8, 0, false },
   growl = { 16, 0, 8, 8, 0, false },
@@ -239,6 +389,8 @@ sprites = {
   board_flat = { 72, 0, 8, 8, 0, false },
   board_high = { 80, 0, 8, 8, 0, false },
   board_half = { 88, 0, 8, 8, 0, false },
+
+  biscuit = { 88, 16, 8, 8, 0, false },
 
   board_1 = { 72,  0, 8, 8, 0, false },
   board_2 = { 80,  0, 8, 8, 0, false },
@@ -259,7 +411,6 @@ sprites = {
   legs_7 = { 56, 8, 8, 8, 0, false },
   legs_8 = { 64, 8, 8, 8, 0, false },
 
-  --sparks_1 = { 24, 104, 4, 4, 0, false },
   sparks_1 = { 72, 8, 4, 4, 0, false },
   sparks_2 = { 76, 8, 4, 4, 0, false },
   sparks_3 = { 72, 12, 4, 4, 0, false },
@@ -268,15 +419,6 @@ sprites = {
   sparks_6 = { 72, 12, 4, 4, 0, false },
   sparks_7 = { 76, 8, 4, 4, 0, false },
   sparks_8 = { 72, 8, 4, 4, 0, false },
-
-  tower_1 = { 96, 0, 5, 8, 0, false },
-  tower_2 = { 102, 0, 14, 8, 0, false },
-  tower_3 = { 116, 0, 6, 8, 0, false },
-
-  plant_1 = { 96, 8, 8, 8, 0, false },
-  plant_2 = { 104, 8, 8, 8, 0, false },
-  plant_3 = { 112, 8, 8, 8, 0, false },
-  plant_4 = { 120, 8, 8, 8, 0, false },
 
   cactus_alive_1 = { 33, 32, 8, 16, 0, false },
   cactus_dead_1 = { 44, 32, 8, 16, 0, false },
@@ -292,29 +434,16 @@ sprites = {
   cactus_dead_4 =  { 44, 16, 8, 16, 0, false },
   cactus_dead_5 =  { 55, 16, 8, 16, 0, false },
 
+  cactus_legs = { 64, 24, 8, 8, 0, false },
+  cactus_head_1 = { 72, 24, 8, 8, 0, false },
+  cactus_head_2 = { 80, 24, 8, 8, 0, false },
+  cactus_head_3 = { 88, 24, 8, 8, 0, false },
+
   skull_1 =  { 64, 16, 8, 8, 0, false },
   skull_2 =  { 72, 16, 8, 8, 0, false },
   skull_3 =  { 64, 16, 8, 8, 0, true, true },
   skull_4 =  { 72, 16, 8, 8, 0, true, true },
-
-  pole = { 80, 8, 8, 8, 0, false },
-
-  road = { 96, 21, 16, 17, 0, false },
-  logo = { 0, 32, 96, 32, 0 },
-
-  extinct = { 0, 64, 128, 32, 0 },
-  extinct = { 0, 64, 128, 32, 0 },
-  extinct_1 = { 0, 64, 20, 32, 0 },
-  extinct_2 = { 0, 64, 36, 32, 0 },
-  extinct_3 = { 0, 64, 52, 32, 0 },
-  extinct_4 = { 0, 64, 60, 32, 0 },
-  extinct_5 = { 0, 64, 78, 32, 0 },
-  extinct_6 = { 0, 64, 92, 32, 0 },
-  extinct_7 = { 0, 64, 112, 32, 0 },
-  extinct_8 = { 0, 64, 128, 32, 0 },
-
 }
-
 
 set_pieces = {
   -- road -----
@@ -344,27 +473,49 @@ set_pieces = {
   -- 'double_deathtrap',
   --
   -- cables ---
-  -- 'powerslide'
-  -- 'double_powerslide'
-  -- 'triple_powerslide'
+  -- 'powerslide',
+  -- 'double_powerslide',
+  -- 'triple_powerslide',
   --
   -- volcanos -
-  -- 'volcano_puddle'
-  -- 'volcano_pool'
-  -- 'volcano_lake'
-  -- 'volcano_ocean'
-  -- 'volcano_deathtrap'
+  -- 'volcano_puddle',
+  -- 'volcano_pool',
+  -- 'volcano_lake',
+  -- 'volcano_ocean',
+  -- 'volcano_deathtrap',
   --
-  -- special --
-  --'cactus_lava_gap'
+  -- ½volcanos -
+  -- 'fs_half_volcano_puddle',
+  -- 'bs_half_volcano_puddle',
+  -- 'fs_half_volcano_pool',
+  -- 'bs_half_volcano_pool',
+  -- 'fs_half_volcano_lake',
+  -- 'bs_half_volcano_lake',
+  -- 'fs_half_volcano_ocean',
+  -- 'bs_half_volcano_ocean',
+  -- 'fs_half_volcano_deathtrap',
+  -- 'bs_half_volcano_deathtrap',
   --
-  -- indoors --
-  -- 'indoor_lake'
-  -- 'indoor_ocean'
+  -- special ---
+  -- 'cactus_lava_gap',
+  --
+  -- indoors ---
+  -- 'indoor_lake',
+  -- 'indoor_ocean',
   --
   -- indovol --
-  'indoor_volcano_lake'
-  -- 'indoor_volcano_ocean'
+  -- 'indoor_volcano_lake',
+  -- 'indoor_volcano_ocean',
+  --
+  -- runways --
+  -- 'lake_runway',
+  -- 'ocean_runway',
+  -- 'deathtrap_runway',
+  --
+  -- volcano runways
+  -- 'volcano_lake_runway',
+   'volcano_ocean_runway',
+  -- 'volcano_deathtrap_runway',
 }
 
 spots = {
@@ -381,9 +532,29 @@ spots = {
     cacti = { bm(3), bm(3.5) },
   },
 
+  fs_half_twin_cactus = {
+    length = bt(4),
+    cacti = { bm(3) },
+  },
+
+  bs_half_twin_cactus = {
+    length = bt(4),
+    cacti = { bm(3.5) },
+  },
+
   double_cactus = {
     length = bt(4),
     cacti = { bm(3), bm(4) },
+  },
+
+  fs_half_double_cactus = {
+    length = bt(4),
+    cacti = { bm(3) },
+  },
+
+  bs_half_double_cactus = {
+    length = bt(4),
+    cacti = { bm(4) },
   },
 
   double_wide = {
@@ -391,14 +562,44 @@ spots = {
     cacti = { bm(3), bm(5) },
   },
 
+  fs_half_double_wide = {
+    length = bt(8),
+    cacti = { bm(3) },
+  },
+
+  bs_half_double_wide = {
+    length = bt(8),
+    cacti = { bm(5) },
+  },
+
   double_lighthouse = {
     length = bt(8),
     cacti = { bm(3), bm(6) },
   },
 
+  fs_half_double_lighthouse = {
+    length = bt(8),
+    cacti = { bm(3) },
+  },
+
+  bs_half_double_lighthouse = {
+    length = bt(8),
+    cacti = { bm(6) },
+  },
+
   double_clifftop = {
     length = bt(8),
     cacti = { bm(3), bm(8) },
+  },
+
+  fs_half_double_clifftop = {
+    length = bt(8),
+    cacti = { bm(3) },
+  },
+
+  bs_half_double_clifftop = {
+    length = bt(8),
+    cacti = { bm(8) },
   },
 
   triple_cactus = {
@@ -481,9 +682,7 @@ spots = {
     soundtrack = 8,
     cacti = {
       bm(3), bm(5),
-      --beat(7), beat(8),
       bm(11), bm(13),
-      --beat(15), beat(16),
     },
     lava = {
       {bm(3)+8, bm(5)-2},
@@ -491,20 +690,13 @@ spots = {
     }
   },
 
-  cactus_rail = {
-    length = beats(8),
-    cacti = {
-      beat(1),
-    }
-  },
-
   powerslide = {
-    length = beats(4),
+    length = bt(8),
     cables = {{ bm(1), bm(3)}}
   },
 
   double_powerslide = {
-    length = beats(4),
+    length = bt(8),
     cables = {
       { bm(1), bm(3)},
       { bm(3), bm(5)},
@@ -512,7 +704,7 @@ spots = {
   },
 
   triple_powerslide = {
-    length = beats(8),
+    length = bt(8),
     cables = {
       { bm(1), bm(3)},
       { bm(3), bm(5)},
@@ -538,6 +730,9 @@ spots = {
 
   volcano_lake = {
     length = bt(4),
+    biscuits = {
+      { bt(2), 48 },
+    },
     layers = {
       {'double_wide'},
       {'lava_lake'},
@@ -577,7 +772,7 @@ spots = {
   },
 
   indoor_volcano_lake = {
-    length = bt(8),
+    length = bt(4),
     layers = {
       {'double_wide'},
       {'powerslide'},
@@ -594,22 +789,160 @@ spots = {
     }
   },
 
+  lake_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_lake',
+    }}
+  },
+
+  ocean_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_ocean'
+    }}
+  },
+
+  deathtrap_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_deathtrap',
+    }}
+  },
+
+  fs_half_volcano_puddle = {
+    length = bt(4),
+    layers = {
+      {'fs_half_twin_cactus'},
+      {'lava_puddle'},
+    }
+  },
+
+  bs_half_volcano_puddle = {
+    length = bt(4),
+    layers = {
+      {'bs_half_twin_cactus'},
+      {'lava_puddle'},
+    }
+  },
+
+  fs_half_volcano_pool = {
+    length = bt(4),
+    layers = {
+      {'fs_half_double_cactus'},
+      {'lava_pool'},
+    }
+  },
+
+  bs_half_volcano_pool = {
+    length = bt(4),
+    layers = {
+      {'bs_half_double_cactus'},
+      {'lava_pool'},
+    }
+  },
+
+  fs_half_volcano_lake = {
+    length = bt(4),
+    layers = {
+      {'fs_half_double_wide'},
+      {'lava_lake'},
+    }
+  },
+
+  bs_half_volcano_lake = {
+    length = bt(4),
+    layers = {
+      {'bs_half_double_wide'},
+      {'lava_lake'},
+    }
+  },
+
+  fs_half_volcano_ocean = {
+    length = bt(8),
+    layers = {
+      {'fs_half_double_lighthouse'},
+      {'lava_ocean'},
+    }
+  },
+
+  bs_half_volcano_ocean = {
+    length = bt(4),
+    layers = {
+      {'bs_half_double_lighthouse'},
+      {'lava_ocean'},
+    }
+  },
+
+  fs_half_volcano_deathtrap = {
+    length = bt(8),
+    layers = {
+      {'fs_half_double_clifftop'},
+      {'lava_deathtrap'},
+    }
+  },
+
+  bs_half_volcano_deathtrap = {
+    length = bt(8),
+    layers = {
+      {'bs_half_double_clifftop'},
+      {'lava_deathtrap'},
+    }
+  },
+
+  volcano_lake_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_lake',
+      'bs_half_double_cactus',
+    }}
+  },
+
+  volcano_ocean_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_ocean',
+    }},
+    cacti = {bm(8)},
+  },
+
+  volcano_deathtrap_runway = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_deathtrap',
+    }},
+    cacti = {bm(10)},
+  },
+
 }
+
 
 function cue_spot(spot, plus)
   if plus ~= nil then
     x = plus
   else
-    x = trex.offset[1] + 128
+    x = distance + 128
   end
   if spot.soundtrack ~= nil then
     music(spot.soundtrack, 0, 3)
   end
   for c in all(spot.cacti) do
-    add_cactus(x + c - beats(2))
+    add_cactus(x + c - bm(3))
   end
   for l in all(spot.lava) do
-    add_lava(x+l[1] - beats(2), x+l[2] - beats(2))
+    add_lava(x+l[1] - bm(3), x+l[2] - bm(3))
+  end
+  for b in all(spot.biscuits) do
+    add(biscuits, {
+      x + b[1],
+      0 - b[2],
+    })
   end
   for c in all(spot.cables) do
     add_pole(x + c[1], 32)
@@ -620,17 +953,12 @@ function cue_spot(spot, plus)
     )
   end
   for l in all(spot.layers) do
+    pplus = distance + 128
     for spot_name in all(l) do
-      cue_spot(spots[spot_name])
+      cue_spot(spots[spot_name], pplus)
+      pplus = pplus + spots[spot_name].length / 2
     end
   end
-      --add_pole(next_x - half, 32)
-      --add_cable(
-        --last_x - half, -32,
-        --next_x - half, -32
-      --)
-      --last_x = next_x
-
 end
 
 function add_cactus(x)
@@ -656,6 +984,15 @@ function add_lava(x1, x2)
   add(lava, { x1, x2 })
 end
 
+function extend_combo(score, text)
+  add(combo, {
+    text = text,
+    frame = frame,
+    score = score,
+  })
+  combo_score = combo_score + score
+end
+
 -->8
 --------------------------------
 -- actions ---------------------
@@ -667,7 +1004,7 @@ actions = {
     end
     trick = 'charge'
     charge = 0
-    trex.vector[2] = -0.5
+    --lift = -0.5 --undome
     --can_pop = true
 
     sfx(23, 3)
@@ -678,18 +1015,27 @@ actions = {
     sfx(-1, 3)
     sfx(0, 3)
     shake_frames = 10
+
+
     if trick == 'charge' then
+    elseif trick == 'meteor' then
       --add(eventloop, 'pop')
     end
+
     if trick == 'meteor' then
-      trex.vector[2] = meteor_start_height/14
+      lift = max(meteor_start_height/14, -4.5)
+      cactus.burn = true
+      extend_combo(50, 'asteroid')
     else
-      trex.vector[2] = -4
+      lift = -3
+      cactus.fall = true
+      extend_combo(20, 'stomp')
     end
+
     trick = 'air'
     can_charge = false
     after(16, 'enable_charge')
-    trex.offset[2] = (
+    altitude = (
       cacti[1].offset[2] -
       cacti[1].size[2] - 4
     )
@@ -697,11 +1043,8 @@ actions = {
     cactus.alive = false
     cactus.died = frame
     charge_trail = {}
-    add(combo, {
-      text = 'meteor strike',
-      frame = frame,
-      score = 100,
-    })
+
+
   end,
 
   enable_charge = function()
@@ -736,18 +1079,21 @@ actions = {
     if paused == false and alive == true then
       paused = true
 
-      board.offset = {trex.offset[1], trex.offset[2]}
+      board.offset = {distance, altitude}
       board.vector = {}
-      board.vector[1] = trex.vector[1] - 1
-      board.vector[2] = trex.vector[2] - 6
+      board.vector[1] = speed - 1
+      board.vector[2] = lift - 6
 
-      skull.offset = {trex.offset[1], trex.offset[2]}
+      skull.offset = {distance, altitude}
       skull.vector = {}
-      skull.vector[1] = trex.vector[1]
-      skull.vector[2] = trex.vector[2] - 2
+      skull.vector[1] = speed
+      skull.vector[2] = lift - 2
 
-      combo = nil
-      combo = {}
+      --combo = nil
+      --combo = {}
+      for c in all(combo) do
+        c.bailed = frame
+      end
 
       parallax(0)
       sfx(2, 3)
@@ -763,7 +1109,7 @@ actions = {
     sfx(8, 3)
     trick = 'grab'
     charge_trail = {}
-    --trex.vector[2] = 7
+    --lift = 7
     --meteor_trail = {}
   end,
 
@@ -771,27 +1117,23 @@ actions = {
     sfx(-1, 3)
     sfx(8, 3)
     trick = 'meteor'
-    trex.vector[2] = 7
+    lift = 7
     --charge_trail = {}
     --can_pop = true
     meteor_trail = {}
-    meteor_start_height = trex.offset[2]
+    meteor_start_height = altitude
   end,
 
   grind = function()
     parallax(2)
     trick = 'grind'
-    trex.offset[1] = ceil(trex.offset[1])
-    trex.offset[2] = groundlevel
-    trex.vector[2] = 0
+    distance = ceil(distance)
+    altitude = groundlevel
+    lift = 0
     charge_trail = {}
     meteor_trail = {}
 
-    add(combo, {
-      text = '50-50',
-      frame = frame,
-      score = 50,
-    })
+    extend_combo(10, 'powerslide')
   end,
 
   land = function()
@@ -805,22 +1147,22 @@ actions = {
       else
         sfx(1, 3)
       end
-      trick = 'roll'
-      roll_count = 0
+      trick = 'push'
     end
 
     if #combo > 0 then
       for c in all(combo) do
         c.landed = frame
-        score = score + c.score
       end
+      score = score + combo_score
       --combo = {}
+      --combo_score = 0
       sfx(18, 3)
     end
 
     --parallax(1)
-    trex.offset[2] = 0
-    trex.vector[2] = 0
+    altitude = 0
+    lift = 0
   end,
 
   next = function()
@@ -839,39 +1181,16 @@ actions = {
     add(script, set_pieces[key])
   end,
 
-  add_pole = function()
-    if mode != 'play' or paused then
-      return
-    end
-
-    if #poles > 0 then
-      poles = nil
-      poles = {}
-      after(16, 'next')
-      return
-    end
-
-    nextx = trex.offset[1] + 120
-
-    for i = 0,2 do
-      add(poles, {
-        offset = { nextx + i * 64, -3 },
-        size = { 8, 32 },
-      })
-    end
-    after(16, 'next')
-  end,
-
   pop = function()
     if can_pop == false then
       return
     end
     if trick == 'charge' then
-      trex.vector[2] = -9
+      lift = -9
     elseif trick == 'grind' then
-      trex.vector[2] = -4
+      lift = -4
     else
-      trex.vector[2] = -3.2
+      lift = -3.2
     end
     trick = 'pop'
 
@@ -882,7 +1201,6 @@ actions = {
 
   push = function()
     trick = 'push'
-    roll_count = 0
     parallax(2)
   end,
 
@@ -890,45 +1208,18 @@ actions = {
     trick = 'ollie'
   end,
 
-
-    --last_x = x
-    --for i = 1,6 do
-      --next_x = x + frames_per_beat * 2 * i
-      --add_pole(next_x - half, 32)
-      --add_cable(
-        --last_x - half, -32,
-        --next_x - half, -32
-      --)
-      --last_x = next_x
-    --end
-
   play = function()
     if mode == 'play' then
       return true
     end
 
-    music(0)
+    music(7)
 
     mode = 'play'
-    trex.offset[1] = foreground.offset[1] + trex.size[1]
+    distance = foreground.offset[1] + trex.size[1]
 
     add(script, set_pieces[1])
     add(eventloop, 'next')
-    every(frames_per_bar, 'increment_score')
-
-    --add(script, 'start_ram')
-    --add(script, 'cactus_lava_gap')
-    --add(script, 'rail_gap')
-    --add(script, 'cactus_rail')
-    --add(script, 'add_pole')
-    --add(script, 'start_overtake')
-    --add(script, 'cactus_rail')
-  end,
-
-  increment_score = function()
-    if mode == 'play' and paused == false then
-      score = score + 2
-    end
   end,
 
   release = function()
@@ -937,36 +1228,13 @@ actions = {
 
   reset = function()
     score = 0
+    combo_score = 0
     trick = 'push'
     mode = 'attract'
     paused = false
-    roll_count = 0
 
     music(3)
 
-    --for k,v in pairs(timeouts) do
-      --del(timeouts, k)
-    --end
-    --for k,v in pairs(script) do
-      --del(script, k)
-    --end
-    --for k,v in pairs(lava) do
-      --del(lava, k)
-    --end
-    --for k,v in pairs(cacti) do
-      --del(cacti, k)
-    --end
-    --for k,v in pairs(poles) do
-      --del(poles, k)
-      --del(poles, poles[k])
-    --end
-    --for k,v in pairs(cables) do
-      --del(cables, k)
-      --del(cables, poles[k])
-    --end
-
-
-    timeouts = nil
     timeouts = {}
 
     intervals = nil
@@ -986,17 +1254,18 @@ actions = {
     groundlevel = 0
     alive = true
     trex.trick = 'push'
-    trex.offset = { 10, 0 }
+    distance = 0
+    altitude = 0
     trex.vector = { push_speed, 0 }
     trex.size = { 16, 16 }
-    foreground.offset = { -10, -96 }
-    foreground.vector = { trex.vector[1], 0 }
+    foreground.offset = { -10, -108 }
+    foreground.vector = { speed, 0 }
     foreground.zoom = 1
-    nearground.offset = { -10, -92 }
+    nearground.offset = { -10, -104 }
     nearground.vector = { 1, 0 }
-    cityscape.offset = { -10, -82 }
+    cityscape.offset = { -10, -94 }
     cityscape.vector = { 1, 0 }
-    sky.offset = { -10, -96 }
+    sky.offset = { -10, -108 }
     sky.vector = { 0.5, 0 }
     parallax(2)
     every(60, 'gc')
@@ -1009,23 +1278,23 @@ actions = {
 --------------------------------
 -- rendering -------------------
 
-function parallax(speed)
-  foreground.offset[1] = trex.offset[1] - 16
-  if speed == 0 then
-    --trex.vector[1] = 0
+function parallax(s)
+  foreground.offset[1] = distance - 16
+  if s == 0 then
+    --speed = 0
     foreground.vector[1] = 0
     nearground.vector[1] = 0
     cityscape.vector[1] = 0
     sky.vector[1] = 0
-  elseif speed == 1 then
-    trex.vector[1] = push_speed
-    foreground.vector[1] = trex.vector[1]
+  elseif s == 1 then
+    speed = push_speed
+    foreground.vector[1] = speed
     nearground.vector[1] = 0.5
     cityscape.vector[1] = 0.5
     sky.vector[1] = 0.25
-  elseif speed == 2 then
-    trex.vector[1] = 2
-    foreground.vector[1] = trex.vector[1]
+  elseif s == 2 then
+    speed = 2
+    foreground.vector[1] = speed
     nearground.vector[1] = 1.5
     cityscape.vector[1] = 1.5
     sky.vector[1] = 1
@@ -1086,192 +1355,6 @@ function printr(text, x, y, colors)
   end
 end
 
-render = {
-  ui = function()
-    camera(0, 0)
-
-    if mode == 'attract' then
-      draw('logo', { 16, 64 })
-    end
-
-    if trick == 'charge' then
-      --print(charge .. '', 3, 3, 7)
-    end
-
-    score_x = 120 - (#(''..score)) * 4
-
-    if score == last_score then
-      score_colors = { 5, 6, 1 }
-    else
-      score_colors = { 5, 6, 8 }
-    end
-
-    last_score = score
-    score_colors = {7,0}
-
-    start_y = 8
-
-    if #combo > 1 then
-      last_age = frame - combo[#combo].frame
-      slide = max(0, 10 - last_age)
-      start_y = (8 - (#combo - 1) * 10) + slide
-    end
-
-    for i,t in pairs(combo) do
-      x = 8
-      y = start_y + ((i-1) * 10)
-
-      if t.landed then
-        age = frame - t.landed
-        text_colors = {0,11}
-        score_colors = {0,11}
-      else
-        text_colors = {0,12}
-      end
-
-      printr(''..t.score, x, y, {7,0})
-      printr(t.text, x + 16, y, text_colors)
-
-      if t.landed and age > 20 then
-        del(combo, t)
-      end
-    end
-    printr(score, score_x, 8, score_colors)
-
-
-    if paused == true and alive == false then
-      if frame - died > 60 then
-        dead_for = flr(min(frame - died - 60, 40) / 10 * 2)
-        extinct_sprite = 'extinct_' .. dead_for
-        draw(extinct_sprite, { 1, 64 })
-      end
-    end
-  end,
-
-  foreground = function()
-    x = flr(foreground.offset[1])
-    y = flr(foreground.offset[2])
-
-    if shake_frames > 0 then
-      y = y + (rnd(2)-1)
-    end
-
-    camera(x, y)
-    width = 16
-    tiles = 128 / width
-
-    rectfill(x, 0, x + 128, 64, 4)
-
-    for i = (x - 15),(x + 128) do
-      if i % 16 == 0 then
-        draw('road', { i, 16 })
-      end
-    end
-
-    draw_lava()
-
-    draw_cables()
-    for pole in all(poles) do
-      --h = hitboxes.cactus(cactus)
-      --rectfill(
-        --h.offset[1],
-        --h.offset[2],
-        --h.offset[1] + h.size[1],
-        --h.offset[2] + h.size[2],
-        --14
-      --)
-      draw_pole(pole)
-    end
-
-    if mode == 'play' and alive then
-      --h = hitboxes.trex()
-      --rectfill(
-        --h.offset[1],
-        --h.offset[2],
-        --h.offset[1] + h.size[1],
-        --h.offset[2] + h.size[2],
-        --14
-      --)
-      draw_trex()
-    end
-
-    for cactus in all(cacti) do
-      --h = hitboxes.cactus(cactus)
-      --rectfill(
-        --h.offset[1],
-        --h.offset[2],
-        --h.offset[1] + h.size[1],
-        --h.offset[2] + h.size[2],
-        --14
-      --)
-      draw_cactus(cactus)
-    end
-
-    if mode == 'play' and alive == false then
-      draw_board()
-      draw_skull()
-    end
-  end,
-
-  nearground = function()
-    x = ceil(nearground.offset[1])
-    y = ceil(nearground.offset[2])
-    camera(x, y)
-    rectfill(x, 0, x + 128, 3, 4)
-    for plant in all(plants(x)) do
-      draw(plant[1], { plant[2], 1 })
-    end
-  end,
-
-  cityscape = function()
-    x = ceil(cityscape.offset[1])
-    y = ceil(cityscape.offset[2])
-    camera(x, y)
-    rectfill(x, 9, x + 128, 9, 2)
-    for building in all(buildings(x)) do
-      draw(building[1], { building[2], 10 })
-    end
-  end,
-
-  sky = function()
-    x = ceil(sky.offset[1])
-    y = ceil(sky.offset[2])
-    camera(x, y)
-    rectfill(x, y, x + 128, 0, 1)
-    for star in all(stars(x)) do
-      circfill(star[1], star[2], 0, 6)
-    end
-  end,
-}
-
-function plants(x)
-  p = {}
-  for i = (x - 15),(x + 128) do
-    if i % 256 == 0 then
-      add(p, { 'plant_4', i })
-    elseif i % 128 == 0 then
-      add(p, { 'plant_3', i })
-    elseif i % 96 == 0 then
-      add(p, { 'plant_2', i })
-    elseif i % 64 == 0 then
-      add(p, { 'plant_1', i })
-    end
-  end
-  return p
-end
-
-function buildings(x)
-  b = {}
-  for i = (x - 15),(x + 128) do
-    if i % 98 == 0 then
-      add(b, { 'tower_1', i })
-    elseif i % 128 == 0 then
-      add(b, { 'tower_2', i })
-    end
-  end
-  return b
-end
-
 function stars(x)
   s = {}
   for i = (x - 15),(x + 128)do
@@ -1288,10 +1371,15 @@ end
 function draw_cactus(cactus)
   if cactus.alive then
     draw('cactus_alive_1', cactus.offset)
-  else
+  elseif cactus.burn then
     fsd = frame - cactus.died
     sprite = 'cactus_dead_' .. min(flr(fsd / 4) + 1, 5)
     draw(sprite, cactus.offset)
+  elseif cactus.fall then
+    draw('cactus_legs', cactus.offset)
+    fsd = frame - cactus.died
+    sprite = 'cactus_head_' .. min(flr(fsd / 4) + 1, 4)
+    draw(sprite, {cactus.offset[1], cactus.offset[2] - 8})
   end
 end
 
@@ -1318,7 +1406,7 @@ function draw_lava()
     )
 
     cx = x1 - foreground.offset[1]
-    cy = -8
+    cy = 0
     cw = x2 - x1
     ch = 16
     clip(cx, cy, w, 110)
@@ -1334,23 +1422,15 @@ function draw_lava()
     end
     clip()
 
-    --h = hitboxes.lava(l)
-    --rectfill(
-      --h.offset[1],
-      --h.offset[2],
-      --h.offset[1] + h.size[1],
-      --h.offset[2] + h.size[2],
-      --14
-    --)
-
   end
 end
 
 function draw_pole(pole)
-  draw('pole', {
-    pole.offset[1] - 3,
-    pole.offset[2] - pole.size[2] + 10
-  })
+  spr(
+    26,
+    pole.offset[1]-3,
+    pole.offset[2]-pole.size[2]+2
+  )
   line(
     pole.offset[1],
     pole.offset[2],
@@ -1362,8 +1442,8 @@ end
 
 function draw_cables()
   for c in all(cables) do
-    tx = trex.offset[1]
-    ty = trex.offset[2]
+    tx = distance
+    ty = altitude
     x1 = c[1] + 3
     y1 = c[2] + 1
     x2 = c[3] - 3
@@ -1404,16 +1484,12 @@ function draw_trex()
   board_offset = { 2, 2 }
 
   offsets = {{
-    trex.offset[1],
-    trex.offset[2],
+    distance,
+    altitude,
   }}
 
   if alive == false then
-    face_sprite = 'dead_1'
-    head_offset[1] = 0
-    head_offset[2] = 7
-    tail_sprite = 'tail_4'
-    legs_sprite = nil
+    -- nothing lol
   elseif trick == 'none' then
     face_sprite = 'smile'
     tail_sprite = 'tail_2'
@@ -1473,26 +1549,12 @@ function draw_trex()
     legs_sprite = 'roll_1'
   end
 
-  if trick == 'charge' then
-    --print(charge .. '', 3, 3, 7)
-    --circ(
-      --ceil(trex.offset[1]) + 8,
-      --trex.offset[2] - 8,
-      --charge / 3,
-      --10
-    --)
-  end
-
   if trick == 'grind' then
     spark = 'sparks_' .. 8 - (loop(frames_per_beat, 7) + 1)
     draw(spark, {
-      ceil(trex.offset[1]) - 2,
-      trex.offset[2],
+      ceil(distance) - 2,
+      altitude,
     })
-    --draw(spark, {
-      --ceil(trex.offset[1]) + 4,
-      --trex.offset[2],
-    --})
   end
 
   for i,t in pairs(charge_trail) do
@@ -1511,7 +1573,9 @@ function draw_trex()
       tl = function(n) return to[2] - n + drop - 2 end
       --drop = 0
 
-      if age < raggedy and charge > 10 then
+      if charge > 36 and charge % 4 == 0 then
+        -- flicker!!!
+      elseif age < raggedy and charge > 10 then
         line(from[1]+5, fl(5), to[1]+5, tl(5), 8)
         line(from[1]+4, fl(4), to[1]+4, tl(4), 9)
         line(from[1]+3, fl(3), to[1]+3, tl(3), 10)
@@ -1527,6 +1591,11 @@ function draw_trex()
         circfill(from[1]+1, fl(1), flrrnd(2), 12)
         --circfill(from[1], from[2] - 0+drop, flrrnd(2), 14)
       end
+
+      if age > 6 then
+        del(charge_trail, t)
+      end
+
     end
   end
 
@@ -1627,7 +1696,7 @@ end
 function tan(a) return sin(a)/cos(a) end
 
 function cable_buckle(p1, p2)
-  tx = trex.offset[1]
+  tx = distance
   x1 = p1.offset[1]
   a = tx - x1
   if trick != 'grind' then
@@ -1677,7 +1746,7 @@ function physics()
     for cactus in all(cacti) do
       c = hitboxes.cactus(cactus)
       if intersect(t, c) then
-        if jump or is_attack[trick] then
+        if jump or trick == 'charge' or trick == 'meteor' then
           if jump then
             can_charge = false
           end
@@ -1709,52 +1778,69 @@ function gravity()
     end
   end
 
-  if trex.offset[2] >= groundlevel then
+  if altitude >= groundlevel then
     return
   end
 
-  air = abs(trex.offset[2]) / 128
+  air = abs(altitude) / 128
 
   if trick == 'charge' then
     ru1 = 3.14159 / 32
-    run = ru1 * (charge+8) / 10
+    run = ru1 * (charge+8) / 1
     vec = sin(run) * 0.6
-    trex.vector[2] = vec
+    --lift = vec
+    --lift = min(lift + vec / 50, 0.1)
+    mul = 0.1
+    if charge > 30 then
+      mul = 0.5
+    elseif charge > 20 then
+      mul = 0.3
+    end
+    lift = lift + vec * 0.1
+    --lift = vec 
+
+    if altitude < -63 then
+      lift = lift + 0.1
+    end
+    if altitude > -8 and lift > 1 then
+      lift = lift - 1
+      lift = 0
+    end
     --nothing lol
   elseif trick == 'grind' and groundlevel != 0 then
-    trex.offset[2] = groundlevel
-  elseif trex.vector[2] < 0 then
+    altitude = groundlevel
+  elseif lift < 0 then
     if trick == 'ollie' then
       mul = 0.6
     else
       mul = 1
     end
     --pop
-    trex.vector[2] = trex.vector[2] + (0.25 * mul)
-  elseif trex.vector[2] < 0.5 and trick == 'ollie' then
+    lift = lift + (0.25 * mul)
+  elseif lift < 0.5 and trick == 'ollie' then
     --hang
-    trex.vector[2] = trex.vector[2] + 0.25 * 0.1
+    lift = lift + 0.25 * 0.1
   elseif trick == 'meteor' then
     speedup = false
     nearest = true
-    height = 0-trex.offset[2]
+    height = 0-altitude
     for c in all(cacti) do
-      ahead = c.offset[1] > trex.offset[1]
+      ahead = c.offset[1] > distance
       if ahead == true then
-        gap = c.offset[1] - trex.offset[1]
+        gap = c.offset[1] - distance
         if nearest == true then
 
           if gap < 32 and height > 32 then
-            trex.vector[2] = 8
+            lift = 8
             speedup = true
           elseif gap < 8 and height > 64 then
-            trex.vector[2] = 9
+            lift = 9
             speedup = true
           elseif gap < 8 and height > 20 then
-            trex.vector[2] = 4
+            lift = 4
             speedup = true
           elseif gap < 4 and height > 10 then
-            trex.vector[2] = 5
+            lift = 5
             speedup = true
           end
           nearest = false
@@ -1762,22 +1848,22 @@ function gravity()
       end
     end
     if speedup == false then
-      trex.vector[2] = 3
+      lift = 3
     end
   else
     --drop
-    trex.vector[2] = min(
-      trex.vector[2] + 0.95 * air,
+    lift = min(
+      lift + 0.95 * air,
       2.5
     )
   end
 end
 
 function update_groundlevel()
-  tx = trex.offset[1]
-  tx1 = trex.offset[1]
-  tx2 = trex.offset[1] + trex.size[1]
-  ty = trex.offset[2] -- trex.size[2]
+  tx = distance
+  tx1 = distance
+  tx2 = distance + trex.size[1]
+  ty = altitude -- trex.size[2]
 
   for c in all(cables) do
     x1 = c[1]
@@ -1839,8 +1925,8 @@ hitboxes = {
     if trick == 'meteor' then
       return {
         offset = {
-          trex.offset[1] + 2,
-          trex.offset[2] - trex.size[2],
+          distance + 2,
+          altitude - trex.size[2],
         },
         size = {
           16,
@@ -1852,17 +1938,17 @@ hitboxes = {
     if trick == 'charge' then
       return {
         offset = {
-          trex.offset[1] + 2,
-          trex.offset[2] - trex.size[2] + 8,
+          distance + 2,
+          altitude - trex.size[2] + 8,
         },
-        size = { 16, 14 }
+        size = { 8, 8 }
       }
     end
 
     return {
       offset = {
-        trex.offset[1] + 2,
-        trex.offset[2] - trex.size[2] + 8,
+        distance + 2,
+        altitude - trex.size[2] + 8,
       },
       size = { 8, 6 }
     }
@@ -1900,19 +1986,19 @@ function move()
     return
   end
 
-  trex.offset[1] = ceil(trex.offset[1] + trex.vector[1])
-  if (trick == 'roll' or trick == 'push') and groundlevel > 0 then
-    trex.offset[2] = trex.offset[2] + 3
+  distance = ceil(distance + speed)
+  if trick == 'push' and groundlevel > 0 then
+    altitude = altitude + 3
     actions.gameover()
   elseif trick == 'grind' and groundlevel == 0 then
     actions.release()
-    trex.offset[2] = trex.offset[2]
+    altitude = altitude
   elseif trick == 'grind' then
-    trex.offset[2] = groundlevel - 2
+    altitude = groundlevel - 2
   else
-    trex.offset[2] = trex.offset[2] + trex.vector[2]
+    altitude = altitude + lift
   end
-  if alive and trex.offset[2] > groundlevel then
+  if alive and altitude > groundlevel then
     if groundlevel == 0 then
       add(eventloop, 'land')
     else
@@ -1920,19 +2006,31 @@ function move()
     end
   end
 
-  --if trick == 'charge' and flr(trex.offset[1]) % 8 == 0 then
+  --if trick == 'charge' and flr(distance) % 8 == 0 then
   if trick == 'charge' then
+
+    ru1 = 3.14159 / 32
+    run = ru1 * (charge+8) / 1
+    vec = sin(run) * 0.6
+    mul = 0.1
+    if charge > 30 then
+      mul = 2
+    elseif charge > 20 then
+      mul = 0.3
+    end
+    y = altitude - 1 + vec * mul
+
     add(charge_trail, {
-      trex.offset[1] + 6,
-      trex.offset[2] - 1,
+      distance + 6,
+      y,
       frame,
     })
   end
 
-  if trick == 'meteor' and flr(trex.offset[1]) % 2 == 0 and trex.offset[2] < -8 then
+  if trick == 'meteor' and flr(distance) % 2 == 0 and altitude < -8 then
     add(meteor_trail, {
-      trex.offset[1],
-      trex.offset[2],
+      distance,
+      altitude,
       frame,
     })
   end
@@ -2056,21 +2154,21 @@ __gfx__
 00000000000080000008000000880000800000000008000000008800000880000080000000000009000d00000808880000030000000300000003000000030000
 000000000000880000088000008000000000000000000000000000000000000000000000aa090a00000d00000008880000030000000300000003000000030000
 0000b0000000900000000009000a0000000090000000000900000000000000000666600006666660000c00000000000044444444444444444444444444444444
-000bbb0b0000000ba000000000000000000000000000000000000000000000006655660066666666000cc7000000000044444444444444444444444444444444
-0b0bbb0b000090bbb0b0000900ba00000000900000000009000a00000000000066556666666655560000c0000000000044444444444444444444444444444444
-0b0bbb0b0000b0bbb0b000090bbbab00009093a00000000900000000000000a066556666066655560000c0000000000044444444444444444444444444444444
-0b0bbb0b0000b0bbb0b0000b0bbb0b000099333a30000909390a0000000a000066666666060666660000c0000000000044444444444444444444444444444444
-0b0bbb0b0000b0bbb0b000ab0bbb0b000a303330300a099933aa0000000000a066660000060666600000c0000000000055555555555555555555555555555555
-0b0bbbbb000ab0bbb0b0000b0bbb0b00003033303000039333a3000000000a006666660000066600000cc7000000000055555555555555555555555555555555
-0b0bbbb00000b0bbbbb900ab0bbb0b000a393330300a039333a309000a000a000660000000066600000c000000000000dddddddddddddddddddddddddddddddd
-0b0bbb00000ab0bbbb0000ab0bbbbb900a303330300aa39333a30000000aaa0000000000000000000000000000000000dddddddddddddddddddddddddddddddd
-0bbbbb00000ab0bbb00900ab0bbbb0000a3933333000a39333039000aa0aaa0000000000000000000000000000000000dddd66666666dddddddd66666666dddd
-000bbb00000abbbbb00000ab0bbb0a900a3933330a00a39333339000a9999a0a00000000000000000000000000000000dddddddddddddddddddddddddddddddd
-000bbb00000000bbba0000abbbbb00000a393330a000a39333399000a933900000000000000000000000000000000000dddddddddddddddddddddddddddddddd
-000bbb00000000bbb90000000bbb90000a3333309000a39333990000a933390a00000000000000000000000000000000dddddddddddddddddddddddddddddddd
-000bbb00000000bbb00000000bbb9000000033390000a33333900000a93339aa0000000000000000000000000000000055555555555555555555555555555555
-000bbb00000000bbb00000000bbb0000000033390000000333900000093339a00000000000000000000000000000000055555555555555555555555555555555
-000bbb00000000bbb00000000bbb0000000033390000000333000000093339a00000000000000000000000000000000055555555555555555555555555555555
+000bbb0b0000000ba000000000000000000000000000000000000000000000006655660066666666000cc7000028820044444444444444444444444444444444
+0b0bbb0b000090bbb0b0000900ba00000000900000000009000a00000000000066556666666655560000c000028ee82044444444444444444444444444444444
+0b0bbb0b0000b0bbb0b000090bbbab00009093a00000000900000000000000a066556666066655560000c00008eeee8044444444444444444444444444444444
+0b0bbb0b0000b0bbb0b0000b0bbb0b000099333a30000909390a0000000a000066666666060666660000c00008eeee8044444444444444444444444455555555
+0b0bbb0b0000b0bbb0b000ab0bbb0b000a303330300a099933aa0000000000a066660000060666600000c000028ee82055555555555555555555555555555555
+0b0bbbbb000ab0bbb0b0000b0bbb0b00003033303000039333a3000000000a006666660000066600000cc70000288200555555555555555555555555dddddddd
+0b0bbbb00000b0bbbbb900ab0bbb0b000a393330300a039333a309000a000a000660000000066600000c000000000000dddddddddddddddddddddddd44444444
+0b0bbb00000ab0bbbb0000ab0bbbbb900a303330300aa39333a30000000aaa000b0bbb00000b0b0bbb00000000000000dddddddddddddddddddddddddddddddd
+0bbbbb00000ab0bbb00900ab0bbbb0000a3933333000a39333039000aa0aaa000bbbbb00bb000000000000bb00000000dddd66666666dddddddd66666666dddd
+000bbb00000abbbbb00000ab0bbb0a900a3933330a00a39333339000a9999a0a000bbb00b00bbb00b000b0000000b000dddddddddddddddddddddddddddddddd
+000bbb00000000bbba0000abbbbb00000a393330a000a39333399000a9339000000bbb000b0bbb0b0b00bb000000bb00dddddddddddddddddddddddddddddddd
+000bbb00000000bbb90000000bbb90000a3333309000a39333990000a933390a000bbb000b0bbb0b0000bb000000b000dddddddddddddddddddddddddddddddd
+000bbb00000000bbb00000000bbb9000000033390000a33333900000a93339aa000bbb000b0bbb0bbb0bbb0b000bbb0055555555555555555555555555555555
+000bbb00000000bbb00000000bbb0000000033390000000333900000093339a0000bbb000b0bbbbbb00bbbbb000bbb0055555555555555555555555555555555
+000bbb00000000bbb00000000bbb0000000033390000000333000000093339a0000bbb000b0bbbb00b0bbbb00000bbb055555555555555555555555555555555
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2185,13 +2283,13 @@ __sfx__
 0110000003750037510f750007000f7500f75500700007000a7500a7510b750007000b7500b7550070000700087500875500700007000b7500b75500700007000675006751057500070005750057510375003700
 01100000032140321203412034140f2140f2120f4120f4140a2140a2120a4120a4140b2140b2120b4120b414082140821208412084140b2140b2120b4120b4140621406212064120641405214052120541205414
 01100000176252360523605180002b625136030c0000c000176250c0050c005240052b6252b6050c0050c00517625240052f605240052b625136051d0000c005176250c00524005240052b6251f6052b6002b600
-011000000b6150b6052f605240001f615136051f6150c0000b615180051f6150c0051f6151f60500005000050b6151800523605180051f6151f6051f615180000b615180051f615180051f6152b6052b6002b600
+011000000b6150b6052f605240001361513605136150c0000b61518005136150c005136151f60500005000050b615180052360518005136151f60513615180000b615180051361518005136152b6052b6002b600
 01030000157301a7401a7401574015740157301573015730157301572015720157100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100000176152b6052b6152b615176152b6052b6152b6150f7500a7520b7520675205752057520575205755176050000517605000052b605376050000500005176050000500005000052b6052b6052b6002b600
 011000030c5101a510185102400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018000
 01100000032100321500200002000f2100f21500200003000a3100a3150a2150a3000b3100b3150b2150b215082100821500200002000b2100b21500300003000631006315062150030005310053150521505215
 01040000055500555005550055500555005551101000e100045500255002550045500455002100021000210002550025500050000500005500055002500025010255102550025500255002550025500255002551
-0104000011710117101171011710117101171011710117100c7000c7000c7000c7000c7100c7100c7100c7100c7100c7100c7100c7150e7110e7100e7100e7100e7100e7100e7100e7100e7100e7100e7100e710
+0104000011710117101171011710117101171011710117150c5000050000500005000051000510005100051000510005100051000510025010250002500025000251002510025100251002510025100251002515
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
