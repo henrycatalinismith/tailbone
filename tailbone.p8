@@ -20,6 +20,24 @@ function _update60()
     shake_frames = shake_frames - 1
   end
 
+  if new_score > score then
+    score = ceil(tween(
+      old_score, new_score,
+      landed, landed + 20
+    ))
+  else
+    old_score = score
+  end
+
+  if new_combo_score > combo_score then
+    combo_score = ceil(tween(
+      old_combo_score, new_combo_score,
+      tricked, tricked + 20
+    ))
+  else
+    old_combo_score = combo_score
+  end
+
   move()
   if trick == 'charge' then
     if charge == 0 then
@@ -39,6 +57,7 @@ function _draw()
   y = ceil(sky.offset[2])
   camera(x, y)
   rectfill(x, y, x + 128, 0, 1)
+
   for star in all(stars(x)) do
     circfill(star[1], star[2], 0, 6)
   end
@@ -302,7 +321,13 @@ function bt(n) return n*16 end
 
 mode = 'attract'
 score = 0
+old_score = 0
+new_score = 0
 combo_score = 0
+new_combo_score = 0
+old_combo_score = 0
+landed = nil
+tricked = nil
 paused = false
 alive = false
 jump = false
@@ -933,10 +958,17 @@ function cue_spot(spot, plus)
     music(spot.soundtrack, 0, 3)
   end
   for c in all(spot.cacti) do
-    add_cactus(x + c - bm(3))
+    add(cacti, {
+      offset = { x + c - bm(3), 0 },
+      size = { 6, 16 },
+      alive = true,
+    })
   end
   for l in all(spot.lava) do
-    add_lava(x+l[1] - bm(3), x+l[2] - bm(3))
+    add(lava, {
+      x+l[1] - bm(3),
+      x+l[2] - bm(3),
+    })
   end
   for b in all(spot.biscuits) do
     add(biscuits, {
@@ -961,14 +993,6 @@ function cue_spot(spot, plus)
   end
 end
 
-function add_cactus(x)
-  add(cacti, {
-    offset = { x, 0 },
-    size = { 6, 16 },
-    alive = true,
-  })
-end
-
 function add_pole(x, h)
   add(poles, {
     offset = { x, -2 },
@@ -990,7 +1014,10 @@ function extend_combo(score, text)
     frame = frame,
     score = score,
   })
-  combo_score = combo_score + score
+  --combo_score = combo_score + score
+  new_combo_score = combo_score+score
+  old_combo_score = combo_score
+  tricked = frame
 end
 
 -->8
@@ -1118,8 +1145,6 @@ actions = {
     sfx(8, 3)
     trick = 'meteor'
     lift = 7
-    --charge_trail = {}
-    --can_pop = true
     meteor_trail = {}
     meteor_start_height = altitude
   end,
@@ -1132,12 +1157,12 @@ actions = {
     lift = 0
     charge_trail = {}
     meteor_trail = {}
-
     extend_combo(10, 'powerslide')
   end,
 
   land = function()
     sfx(-1, 3)
+    landed = frame
     charge_trail = {}
     meteor_trail = {}
     if alive then
@@ -1154,11 +1179,16 @@ actions = {
       for c in all(combo) do
         c.landed = frame
       end
-      score = score + combo_score
+      old_score = score
+      new_score = score+combo_score
+      --score = score + combo_score
       --combo = {}
       --combo_score = 0
       sfx(18, 3)
     end
+    combo_score = 0
+    new_combo_score = 0
+    old_combo_score = 0
 
     --parallax(1)
     altitude = 0
@@ -1228,7 +1258,13 @@ actions = {
 
   reset = function()
     score = 0
+    new_score = 0
+    old_score = 0
     combo_score = 0
+    new_combo_score = 0
+    old_combo_score = 0
+    landed = nil
+    tricked = nil
     trick = 'push'
     mode = 'attract'
     paused = false
@@ -1797,7 +1833,6 @@ function gravity()
       mul = 0.3
     end
     lift = lift + vec * 0.1
-    --lift = vec 
 
     if altitude < -63 then
       lift = lift + 0.1
@@ -2006,7 +2041,6 @@ function move()
     end
   end
 
-  --if trick == 'charge' and flr(distance) % 8 == 0 then
   if trick == 'charge' then
 
     ru1 = 3.14159 / 32
@@ -2045,7 +2079,6 @@ end
 
 function dispatch(action)
   if actions[action] ~= nil then
-    --printh(action)
     actions[action]()
   end
 end
@@ -2071,6 +2104,14 @@ function tick()
       end
     end
   end
+end
+
+function tween(from, to, first_frame, last_frame)
+  frame_count = last_frame - first_frame
+  value_space = to - from
+  per_frame = value_space / frame_count
+  frames_now = frame - first_frame
+  return from + (per_frame * frames_now)
 end
 
 function cron(interval)
