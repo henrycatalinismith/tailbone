@@ -200,10 +200,10 @@ function _draw()
   end
 
   if #combo > 0 then
-    if combo[1].landed then
-      colors = {0,11}
-    elseif combo[1].bailed then
+    if combo[1].bailed then
       colors = {0,8}
+    elseif combo[1].landed then
+      colors = {0,11}
     else
       colors = {0,7}
     end
@@ -215,12 +215,12 @@ function _draw()
     x = #(''..combo_score) * 4
     y = start_y + ((i-1) * 10)
 
-    if t.landed then
+    if t.bailed then
+      text_colors = {0,8}
+    elseif t.landed then
       age = frame - t.landed
       text_colors = {0,11}
       score_colors = {0,11}
-    elseif t.bailed then
-      text_colors = {0,8}
     else
       text_colors = {0,12}
     end
@@ -375,6 +375,7 @@ lava = {}
 biscuits = {}
 meteors = {}
 crashing = nil
+destroying = nil
 
 tricks = {
   'none',
@@ -1001,11 +1002,13 @@ function cue_spot(spot, plus)
   if alive == true then
     for m in all(spot.meteors) do
       add(meteors, {
-        x+m[1] - bm(3),
-        -128,
-        m[2],
-        m[3],
-        m[4]
+        x+m[1] - bm(3), --1 x pos
+        -128,           --2 y pos
+        m[2],           --3 x vec
+        m[3],           --4 y vec
+        m[4],           --5 radius
+        {},             --6 trail
+        true,           --7 alive
       })
     end
   end
@@ -1083,7 +1086,6 @@ actions = {
     sfx(0, 3)
     shake_frames = 10
 
-
     if trick == 'charge' then
     elseif trick == 'meteor' then
       --add(eventloop, 'pop')
@@ -1110,8 +1112,23 @@ actions = {
     cactus.alive = false
     cactus.died = frame
     charge_trail = {}
+  end,
 
+  destroy_meteor = function()
+    destroying[3] = 0
+    destroying[4] = 0
+    destroying[8] = frame --died
 
+    if trick == 'meteor' then
+      lift = max(meteor_start_height/14, -4.5)
+      extend_combo(50, 'asteroid')
+    else
+      lift = -3
+      extend_combo(20, 'stomp')
+    end
+
+    trick = 'air'
+    can_charge = false
   end,
 
   enable_charge = function()
@@ -1134,6 +1151,12 @@ actions = {
       end
     end
 
+    for m in all(meteors) do
+      if m[1] < foreground.offset[1] then
+        del(meteors, m)
+      end
+    end
+
     for i,pole in pairs(poles) do
       if pole.offset[1] < foreground.offset[1] - 64 then
         poles[i] = nil
@@ -1144,7 +1167,7 @@ actions = {
 
   gameover = function()
     if paused == false and alive == true then
-      --paused = true
+      paused = true
 
       board.offset = {distance, altitude}
       board.vector = {}
@@ -1322,6 +1345,7 @@ actions = {
     mode = 'attract'
     paused = false
     crashing = nil
+    destroying = nil
 
     music(3)
 
@@ -1475,7 +1499,19 @@ function draw_cactus(cactus)
 end
 
 function draw_meteor(meteor)
-  circfill(meteor[1], meteor[2], meteor[5], 9)
+  if meteor[7] then
+    for t in all(meteor[6]) do
+      ro = 7 - max(0, (frame - t[3])*0.4)
+      ry = 6 - max(0, (frame - t[3])*0.5)
+      xtra = flrrnd(2)
+      circfill(t[1]-1+xtra, t[2]-0, ro, 9)
+      circfill(t[1]-1+xtra, t[2]-0, ry, 10)
+    end
+    circfill(meteor[1], meteor[2], meteor[5], 9)
+    circfill(meteor[1], meteor[2], meteor[5]-1, 10)
+  else
+    circfill(meteor[1], meteor[2], meteor[5], 5)
+  end
 end
 
 function draw_lava()
@@ -1855,7 +1891,13 @@ function physics()
     for m in all(meteors) do
       mh = hitboxes.meteor(m)
       if intersect(t, mh) then
-        add(eventloop, 'gameover')
+        destroying = m
+        if jump or trick == 'charge' or trick == 'meteor' then
+          m[7] = false
+          add(eventloop, 'destroy_meteor')
+        elseif m[7] then
+          add(eventloop, 'gameover')
+        end
       end
     end
 
@@ -1874,6 +1916,7 @@ function physics()
     end
 
     for m in all(meteors) do
+      add(m[6], {m[1], m[2], frame})
       m[1] = m[1] + m[3]
       m[2] = m[2] + m[4]
     end
@@ -2521,4 +2564,6 @@ __music__
 00 00000000
 00 00000000
 00 00000000
+
+
 
