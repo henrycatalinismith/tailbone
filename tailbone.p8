@@ -143,6 +143,10 @@ function _draw()
     draw_trex()
   end
 
+  for meteor in all(meteors) do
+    draw_meteor(meteor)
+  end
+
   for cactus in all(cacti) do
     --h = hitboxes.cactus(cactus)
     --rectfill(
@@ -369,6 +373,8 @@ poles = {}
 cables = {}
 lava = {}
 biscuits = {}
+meteors = {}
+crashing = nil
 
 tricks = {
   'none',
@@ -539,8 +545,11 @@ set_pieces = {
   --
   -- volcano runways
   -- 'volcano_lake_runway',
-   'volcano_ocean_runway',
+  -- 'volcano_ocean_runway',
   -- 'volcano_deathtrap_runway',
+
+  -- with meteors
+  'volcano_ocean_runway_meteor',
 }
 
 spots = {
@@ -945,6 +954,23 @@ spots = {
     cacti = {bm(10)},
   },
 
+  volcano_ocean_runway_meteor = {
+    length = bt(8),
+    layers = {{
+      'powerslide',
+      'lava_ocean',
+    }},
+    cacti = {bm(8)},
+    meteors = {
+      {
+        bm(5),
+        -push_speed*1,
+        push_speed*2,
+        8
+      }
+    }
+  },
+
 }
 
 
@@ -964,12 +990,26 @@ function cue_spot(spot, plus)
       alive = true,
     })
   end
+
   for l in all(spot.lava) do
     add(lava, {
       x+l[1] - bm(3),
       x+l[2] - bm(3),
     })
   end
+
+  if alive == true then
+    for m in all(spot.meteors) do
+      add(meteors, {
+        x+m[1] - bm(3),
+        -128,
+        m[2],
+        m[3],
+        m[4]
+      })
+    end
+  end
+
   for b in all(spot.biscuits) do
     add(biscuits, {
       x + b[1],
@@ -1104,7 +1144,7 @@ actions = {
 
   gameover = function()
     if paused == false and alive == true then
-      paused = true
+      --paused = true
 
       board.offset = {distance, altitude}
       board.vector = {}
@@ -1138,6 +1178,20 @@ actions = {
     charge_trail = {}
     --lift = 7
     --meteor_trail = {}
+  end,
+
+  impact = function()
+    if crashing then
+      shake_frames = 20
+      del(meteors, crashing)
+
+      add(lava, {
+        crashing[1] - 8,
+        crashing[1] + 8,
+      })
+
+      crashing = nil
+    end
   end,
 
   meteor = function()
@@ -1186,9 +1240,8 @@ actions = {
       --combo_score = 0
       sfx(18, 3)
     end
-    combo_score = 0
     new_combo_score = 0
-    old_combo_score = 0
+    old_combo_score = combo_score
 
     --parallax(1)
     altitude = 0
@@ -1268,6 +1321,7 @@ actions = {
     trick = 'push'
     mode = 'attract'
     paused = false
+    crashing = nil
 
     music(3)
 
@@ -1280,6 +1334,7 @@ actions = {
     combo = {}
 
     cacti = {}
+    meteors = {}
     poles = {}
     script = {}
     cables = {}
@@ -1417,6 +1472,10 @@ function draw_cactus(cactus)
     sprite = 'cactus_head_' .. min(flr(fsd / 4) + 1, 4)
     draw(sprite, {cactus.offset[1], cactus.offset[2] - 8})
   end
+end
+
+function draw_meteor(meteor)
+  circfill(meteor[1], meteor[2], meteor[5], 9)
 end
 
 function draw_lava()
@@ -1793,11 +1852,30 @@ function physics()
       end
     end
 
+    for m in all(meteors) do
+      mh = hitboxes.meteor(m)
+      if intersect(t, mh) then
+        add(eventloop, 'gameover')
+      end
+    end
+
+    for m in all(meteors) do
+      if m[2] > 0 then
+        crashing = m
+        add(eventloop, 'impact')
+      end
+    end
+
     for l in all(lava) do
       lh = hitboxes.lava(l)
       if intersect(t, lh) then
         add(eventloop, 'gameover')
       end
+    end
+
+    for m in all(meteors) do
+      m[1] = m[1] + m[3]
+      m[2] = m[2] + m[4]
     end
   end
 end
@@ -1953,6 +2031,13 @@ hitboxes = {
     return {
       offset = { x1, 1 },
       size = { x2 - x1, 8 }
+    }
+  end,
+
+  meteor = function (m)
+    return {
+      offset = { m[1], m[2] },
+      size = { m[5], m[5] }
     }
   end,
 
