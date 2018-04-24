@@ -199,6 +199,19 @@ function _draw()
     end
   end
 
+  if alive == true and paused == false and mode == 'play' then
+    st = ''..time
+    x = 56
+    if time > 9 then
+      bg = {10, 9, 0}
+    else
+      bg = {2, 8, 7}
+      x = 60
+    end
+    printr(sub(st, 1, 1), x, 24, bg)
+    printr(sub(st, 2, -1), x+8, 24, bg)
+  end
+
   if #combo > 0 then
     if combo[1].bailed then
       colors = {0,8}
@@ -324,7 +337,9 @@ function bm(n) return ((n-1)*33)/1 end
 function bt(n) return n*16 end
 
 mode = 'attract'
+level = 1
 score = 0
+time = 0
 old_score = 0
 new_score = 0
 combo_score = 0
@@ -477,7 +492,39 @@ sprites = {
   skull_4 =  { 72, 16, 8, 8, 0, true, true },
 }
 
-set_pieces = {
+levels = {
+  -- level 1
+  {
+    'lone_cactus',
+    'double_cactus',
+    'double_wide',
+    'quad_cactus',
+    'lava_pool',
+  },
+
+  -- level 2
+  {
+    'volcano_pool',
+    'fs_half_volcano_pool',
+    'indoor_lake',
+    'volcano_lake_runway',
+  },
+
+  -- level 3
+  {
+    'bs_half_volcano_lake',
+    'fs_half_volcano_lake',
+    'volcano_ocean_runway',
+  },
+
+  -- level 4
+  {
+    --'volcano_ocean_runway_meteor',
+    'volcano_deathtrap_runway',
+  }
+}
+
+pool = {
   -- road -----
   --'open_road',
   --'interstate',
@@ -653,7 +700,7 @@ spots = {
   },
 
   lava_pool = {
-    length = bt(4),
+    length = bt(2),
     lava = {{ bm(3)+8, bm(4) }},
   },
 
@@ -972,6 +1019,18 @@ spots = {
     }
   },
 
+  apocalypse = {
+    length = bt(1),
+    meteors = {
+      {
+        bm(5),
+        -push_speed*1,
+        push_speed*3,
+        17,
+      },
+    }
+  },
+
 }
 
 
@@ -1117,7 +1176,6 @@ actions = {
   destroy_meteor = function()
     destroying[3] = 0
     destroying[4] = 0
-    destroying[8] = frame --died
 
     if trick == 'meteor' then
       lift = max(meteor_start_height/14, -4.5)
@@ -1185,6 +1243,8 @@ actions = {
         c.bailed = frame
       end
 
+      script = {}
+      pool = {}
       parallax(0)
       sfx(2, 3)
       music(-1)
@@ -1209,8 +1269,8 @@ actions = {
       del(meteors, crashing)
 
       add(lava, {
-        crashing[1] - 8,
-        crashing[1] + 8,
+        crashing[1] - crashing[5],
+        crashing[1] + crashing[5],
       })
 
       crashing = nil
@@ -1250,7 +1310,19 @@ actions = {
         sfx(1, 3)
       end
       trick = 'push'
+
+      time = time + #combo
     end
+
+    level = max(#combo, level)
+    level = min(#levels, level)
+    --if #combo > 1 and level == 1 then
+      --level = 2
+    --elseif #combo > 2 and level == 2 then
+      --level = 3
+    --elseif #combo > 2 and level == 2 then
+      --level = 3
+    --end
 
     if #combo > 0 then
       for c in all(combo) do
@@ -1283,8 +1355,8 @@ actions = {
     cue_spot(spot)
     after(spot.length, 'next')
 
-    key = flr(rnd(#set_pieces)) + 1
-    add(script, set_pieces[key])
+    key = flr(rnd(#levels[level])) + 1
+    add(script, levels[level][key])
   end,
 
   pop = function()
@@ -1324,7 +1396,9 @@ actions = {
     mode = 'play'
     distance = foreground.offset[1] + trex.size[1]
 
-    add(script, set_pieces[1])
+    every(frames_per_beat*2, 'tick')
+    script = {'open_road'}
+    pool = medium_pool
     add(eventloop, 'next')
   end,
 
@@ -1333,6 +1407,7 @@ actions = {
   end,
 
   reset = function()
+    time = 45
     score = 0
     new_score = 0
     old_score = 0
@@ -1387,6 +1462,14 @@ actions = {
     cls()
   end,
 
+  tick = function()
+    time = max(time - 1, 0)
+    if time == 0 then
+      --add(eventloop, 'gameover')
+      script = {'apocalypse'}
+      pool = {'apocalypse'}
+    end
+  end,
 }
 
 -->8
@@ -1501,8 +1584,13 @@ end
 function draw_meteor(meteor)
   if meteor[7] then
     for t in all(meteor[6]) do
-      ro = 7 - max(0, (frame - t[3])*0.4)
-      ry = 6 - max(0, (frame - t[3])*0.5)
+      if meteor[5] == 17 then
+        ro = 17 - (frame-t[3])*1.4
+        ry = -1
+      else
+        ro = meteor[5] - max(0, (frame - t[3])*0.4)
+        ry = meteor[5] - max(0, (frame - t[3])*0.5)
+      end
       xtra = flrrnd(2)
       circfill(t[1]-1+xtra, t[2]-0, ro, 9)
       circfill(t[1]-1+xtra, t[2]-0, ry, 10)
@@ -1510,7 +1598,14 @@ function draw_meteor(meteor)
     circfill(meteor[1], meteor[2], meteor[5], 9)
     circfill(meteor[1], meteor[2], meteor[5]-1, 10)
   else
-    circfill(meteor[1], meteor[2], meteor[5], 5)
+    diedago = frame-meteor[8]
+    for i = 1,10 do
+      px = flrrnd(meteor[5])+diedago
+      py = flrrnd(meteor[5]) + diedago/2
+      r = 2 - flr(diedago / 5)
+      circfill(meteor[1]+px, meteor[2]+py, r, 9)
+      --circfill(meteor[1], meteor[2], 2, 7)
+    end
   end
 end
 
@@ -1872,6 +1967,35 @@ function physics()
     + foreground.vector[1]
   )
 
+  if mode == 'play' then
+    for m in all(meteors) do
+      mh = hitboxes.meteor(m)
+      if intersect(t, mh) then
+        destroying = m
+        if jump or trick == 'charge' or trick == 'meteor' then
+          m[7] = false
+          m[8] = frame
+          add(eventloop, 'destroy_meteor')
+        elseif m[7] and alive == true then
+          add(eventloop, 'gameover')
+        end
+      end
+    end
+
+    for m in all(meteors) do
+      if m[2] > 0 then
+        crashing = m
+        add(eventloop, 'impact')
+      end
+    end
+
+    for m in all(meteors) do
+      add(m[6], {m[1], m[2], frame})
+      m[1] = m[1] + m[3]
+      m[2] = m[2] + m[4]
+    end
+  end
+
   if mode == 'play' and paused == false then
     t = hitboxes.trex()
     for cactus in all(cacti) do
@@ -1888,25 +2012,6 @@ function physics()
       end
     end
 
-    for m in all(meteors) do
-      mh = hitboxes.meteor(m)
-      if intersect(t, mh) then
-        destroying = m
-        if jump or trick == 'charge' or trick == 'meteor' then
-          m[7] = false
-          add(eventloop, 'destroy_meteor')
-        elseif m[7] then
-          add(eventloop, 'gameover')
-        end
-      end
-    end
-
-    for m in all(meteors) do
-      if m[2] > 0 then
-        crashing = m
-        add(eventloop, 'impact')
-      end
-    end
 
     for l in all(lava) do
       lh = hitboxes.lava(l)
@@ -1915,11 +2020,6 @@ function physics()
       end
     end
 
-    for m in all(meteors) do
-      add(m[6], {m[1], m[2], frame})
-      m[1] = m[1] + m[3]
-      m[2] = m[2] + m[4]
-    end
   end
 end
 
@@ -2079,7 +2179,7 @@ hitboxes = {
 
   meteor = function (m)
     return {
-      offset = { m[1], m[2] },
+      offset = { m[1] - m[5]/2, m[2] - m[5]/2 },
       size = { m[5], m[5] }
     }
   end,
