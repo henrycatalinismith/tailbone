@@ -6,15 +6,269 @@ __lua__
 
 function _init()
   poke(0x5f2d, 1)
-  dispatch('reset')
+  actions.reset()
 end
 
 function _update60()
-  tick()
-  input()
+
+  frame = frame + 1
+
+  for timeout in all(timeouts) do
+    if frame == timeout[1] then
+      add(eventloop, timeout[2])
+      del(timeouts, timeout)
+    end
+  end
+
+  for interval in all(intervals) do
+    if frame % interval[1] == interval[3] then
+      if interval[2] ~= nil then
+        add(eventloop, interval[2])
+      end
+    end
+  end
+
+  jump = btn(5)
+  if stat(34) == 1 then
+    --jump = true
+  end
+  if getchar() == ' ' then
+    jump = true
+  end
+
+  if mode == 'attract' then
+
+    if jump then
+      after(16, 'play')
+    end
+
+  elseif mode == 'play' then
+
+    if altitude > 0 then
+      --return true
+    end
+
+    if jump then
+      if alive == false and (frame-died)>60 then
+        after(16, 'reset')
+      elseif trick == 'push' then
+        actions.pop()
+      elseif trick == 'roll' then
+        actions.pop()
+      elseif trick == 'pop' then
+        actions.ollie()
+      elseif trick == 'air' then
+        actions.charge()
+      elseif trick == 'charge' and charge > max_charge then
+        --actions.pop()
+        can_pop = false
+        actions.meteor()
+      elseif trick == 'grind' then
+        actions.pop()
+      elseif trick == 'meteor' then
+        actions.pop()
+      end
+    else
+      if trick == 'push' then
+        can_pop = true
+        can_charge = true
+      elseif trick == 'roll' then
+        can_pop = true
+        can_charge = true
+      elseif trick == 'ollie' then
+        actions.release()
+      elseif trick == 'charge' then --and charge > min_charge then
+        actions.meteor()
+      elseif trick == 'meteor' then
+        can_charge = true
+      elseif trick == 'grind' then
+        can_pop = true
+        can_charge = true
+        --if groundlevel == 0 then
+          --actions.release()
+        --end
+      end
+    end
+
+  end
+
+
   update_groundlevel()
-  physics()
-  dispatch(next(eventloop))
+
+  -- gravity
+
+  if alive == false then
+    if skull.offset[2] < groundlevel then
+      skull.vector[2] = skull.vector[2] + 0.25
+    end
+    if board.offset[2] < groundlevel then
+      board.vector[2] = board.vector[2] + 0.25
+    end
+  end
+
+  if altitude < groundlevel then
+    air = abs(altitude) / 128
+
+    if trick == 'charge' then
+      ru1 = 3.14159 / 32
+      run = ru1 * (charge+8) / 1
+      vec = sin(run) * 0.6
+      --lift = vec
+      lift = min(lift + vec / 50, 0.1)
+      mul = 0.1
+      if charge > 30 then
+        mul = 0.5
+      elseif charge > 20 then
+        mul = 0.3
+      end
+      --lift = lift + vec * 0.1
+
+      if altitude < -63 then
+        lift = lift + 0.1
+      end
+      if altitude > -8 and lift > 1 then
+        lift = lift - 1
+        lift = 0
+      end
+      --nothing lol
+    elseif trick == 'grind' and groundlevel != 0 then
+      altitude = groundlevel
+    elseif lift < 0 then
+      if trick == 'ollie' then
+        mul = 0.6
+      else
+        mul = 1
+      end
+      --pop
+      lift = lift + (0.25 * mul)
+    elseif lift < 0.5 and trick == 'ollie' then
+      --hang
+      lift = lift + 0.25 * 0.1
+    elseif trick == 'meteor' then
+      speedup = false
+      nearest = true
+      height = 0-altitude
+      for c in all(cacti) do
+        ahead = c.offset[1] > distance
+        if ahead == true then
+          gap = c.offset[1] - distance
+          if nearest == true then
+
+            if gap < 32 and height > 32 then
+              lift = 8
+              speedup = true
+            elseif gap < 8 and height > 64 then
+              lift = 9
+              speedup = true
+            elseif gap < 8 and height > 20 then
+              lift = 4
+              speedup = true
+            elseif gap < 4 and height > 10 then
+              lift = 5
+              speedup = true
+            end
+            nearest = false
+          end
+        end
+      end
+      if speedup == false then
+        lift = 3
+      end
+    else
+      --drop
+      lift = min(
+        lift + 0.95 * air,
+        2.5
+      )
+    end
+  end
+
+
+  -- movement
+
+  sky.offset[1] = (
+      sky.offset[1]
+    + sky.vector[1]
+  )
+  cityscape.offset[1] = (
+      cityscape.offset[1]
+    + cityscape.vector[1]
+  )
+  nearground.offset[1] = (
+      nearground.offset[1]
+    + nearground.vector[1]
+  )
+  foreground.offset[1] = ceil(
+      foreground.offset[1]
+    + foreground.vector[1]
+  )
+
+  if mode == 'play' then
+    for m in all(meteors) do
+      mh = hitboxes.meteor(m)
+      if intersect(t, mh) then
+        destroying = m
+        if jump or trick == 'charge' or trick == 'meteor' then
+          m[7] = false
+          m[8] = frame
+          add(eventloop, 'destroy_meteor')
+        elseif m[7] and alive == true then
+          add(eventloop, 'gameover')
+        end
+      end
+    end
+
+    for m in all(meteors) do
+      if m[2] > 0 then
+        crashing = m
+
+        shake_frames = 20
+        del(meteors, m)
+
+        add(lava, {
+          m[1] - m[5],
+          m[1] + m[5],
+        })
+      end
+    end
+
+    for m in all(meteors) do
+      add(m[6], {m[1], m[2], frame})
+      m[1] = m[1] + m[3]
+      m[2] = m[2] + m[4]
+    end
+  end
+
+  if mode == 'play' and paused == false then
+    t = hitboxes.trex()
+    for cactus in all(cacti) do
+      c = hitboxes.cactus(cactus)
+      if intersect(t, c) then
+        if jump or trick == 'charge' or trick == 'meteor' then
+          if jump then
+            can_charge = false
+          end
+          actions.destroy_cactus(cactus)
+        elseif cactus.alive == true then
+          add(eventloop, 'gameover')
+        end
+      end
+    end
+
+    for l in all(lava) do
+      lh = hitboxes.lava(l)
+      if intersect(t, lh) then
+        add(eventloop, 'gameover')
+      end
+    end
+
+  end
+
+  action = next(eventloop)
+  if actions[action] ~= nil then
+    actions[action]()
+  end
+
 
   if shake_frames > 0 then
     shake_frames = shake_frames - 1
@@ -38,7 +292,84 @@ function _update60()
     old_combo_score = combo_score
   end
 
-  move()
+  if alive == false then
+    board_decel = 0.01
+    skull_decel = 0.04
+
+    if board.vector[1] - board_decel < 0 then
+      board.vector[1] = 0
+    else
+      board.vector[1] = board.vector[1] - board_decel
+    end
+    if board.offset[2] > groundlevel then
+      board.offset[2] = groundlevel
+    end
+
+    if skull.vector[1] - skull_decel < 0 then
+      skull.vector[1] = 0
+    else
+      skull.vector[1] = skull.vector[1] - skull_decel
+    end
+    if skull.offset[2] > groundlevel then
+      skull.offset[2] = groundlevel
+    end
+
+    board.offset[1] = ceil(board.offset[1] + board.vector[1])
+    board.offset[2] = board.offset[2] + board.vector[2]
+    skull.offset[1] = ceil(skull.offset[1] + skull.vector[1])
+    skull.offset[2] = skull.offset[2] + skull.vector[2]
+  else
+
+    distance = ceil(distance + speed)
+    if trick == 'push' and groundlevel > 0 then
+      altitude = altitude + 3
+      actions.gameover()
+    elseif trick == 'grind' and groundlevel == 0 then
+      actions.release()
+      altitude = altitude
+    elseif trick == 'grind' then
+      altitude = groundlevel - 2
+    else
+      altitude = altitude + lift
+    end
+    if alive and altitude > groundlevel then
+      if groundlevel == 0 then
+        add(eventloop, 'land')
+      else
+        actions.grind()
+      end
+    end
+
+    if trick == 'charge' then
+
+      ru1 = 3.14159 / 32
+      run = ru1 * (charge+8) / 1
+      vec = sin(run) * 0.6
+      mul = 0.1
+      if charge > 30 then
+        mul = 2
+      elseif charge > 20 then
+        mul = 0.3
+      end
+      y = altitude - 1 + vec * mul
+
+      add(charge_trail, {
+        distance + 6,
+        y,
+        frame,
+      })
+    end
+
+    if trick == 'meteor' and flr(distance) % 2 == 0 and altitude < -8 then
+      add(meteor_trail, {
+        distance,
+        altitude,
+        frame,
+      })
+    end
+
+  end
+
   if trick == 'charge' then
     if charge == 0 then
       sfx(7)
@@ -248,72 +579,6 @@ function _draw()
 
 end
 
-function input()
-  jump = btn(5)
-  if stat(34) == 1 then
-    --jump = true
-  end
-  if getchar() == ' ' then
-    jump = true
-  end
-
-  if mode == 'attract' then
-
-    if jump then
-      after(16, 'play')
-    end
-
-  elseif mode == 'play' then
-
-    if altitude > 0 then
-      --return true
-    end
-
-    if jump then
-      if alive == false and (frame-died)>60 then
-        after(16, 'reset')
-      elseif trick == 'push' then
-        actions.pop()
-      elseif trick == 'roll' then
-        actions.pop()
-      elseif trick == 'pop' then
-        actions.ollie()
-      elseif trick == 'air' then
-        actions.charge()
-      elseif trick == 'charge' and charge > max_charge then
-        --actions.pop()
-        can_pop = false
-        actions.meteor()
-      elseif trick == 'grind' then
-        actions.pop()
-      elseif trick == 'meteor' then
-        actions.pop()
-      end
-    else
-      if trick == 'push' then
-        can_pop = true
-        can_charge = true
-      elseif trick == 'roll' then
-        can_pop = true
-        can_charge = true
-      elseif trick == 'ollie' then
-        actions.release()
-      elseif trick == 'charge' then --and charge > min_charge then
-        actions.meteor()
-      elseif trick == 'meteor' then
-        can_charge = true
-      elseif trick == 'grind' then
-        can_pop = true
-        can_charge = true
-        --if groundlevel == 0 then
-          --actions.release()
-        --end
-      end
-    end
-
-  end
-end
-
 
 -->8
 --------------------------------
@@ -496,11 +761,10 @@ level_music = {
 
 levels = {
 
-  --{
-    --'lone_cactus',
-  --},
+  --{ 'volcano_ocean_runway_meteor' },
 
   {
+    'volcano_ocean_runway_meteor',
     'lone_cactus',
     'double_cactus',
   },
@@ -1097,12 +1361,21 @@ function cue_spot(spot, plus)
     })
   end
   for c in all(spot.cables) do
-    add_pole(x + c[1], 32)
-    add_pole(x + c[2], 32)
-    add_cable(
+
+    add(poles, {
+      offset = { x+c[1], -2 },
+      size = { 1, 32 },
+    })
+
+    add(poles, {
+      offset = { x+c[2], -2 },
+      size = { 1, 32 },
+    })
+
+    add(cables, {
       x + c[1], -32,
       x + c[2], -32
-    )
+    })
   end
   for l in all(spot.layers) do
     pplus = distance + 128
@@ -1111,21 +1384,6 @@ function cue_spot(spot, plus)
       pplus = pplus + spots[spot_name].length / 2
     end
   end
-end
-
-function add_pole(x, h)
-  add(poles, {
-    offset = { x, -2 },
-    size = { 1, h },
-  })
-end
-
-function add_cable(x1, y1, x2, y2)
-  add(cables, { x1, y1, x2, y2 })
-end
-
-function add_lava(x1, x2)
-  add(lava, { x1, x2 })
 end
 
 function extend_combo(score, text)
@@ -1282,20 +1540,6 @@ actions = {
     charge_trail = {}
     --lift = 7
     --meteor_trail = {}
-  end,
-
-  impact = function()
-    if crashing then
-      shake_frames = 20
-      del(meteors, crashing)
-
-      add(lava, {
-        crashing[1] - crashing[5],
-        crashing[1] + crashing[5],
-      })
-
-      crashing = nil
-    end
   end,
 
   meteor = function()
@@ -1930,12 +2174,12 @@ function intersect(a, b)
   return true
 end
 
-function angle(a, b)
-  return atan2(
-    b[2] - a[2],
-    b[1] - a[1]
-  )
-end
+--function angle(a, b)
+  --return atan2(
+    --b[2] - a[2],
+    --b[1] - a[1]
+  --)
+--end
 
 function distance(a, b)
   distance_x = abs(a[1] - b[1])
@@ -1947,7 +2191,7 @@ function distance(a, b)
   return sqrt(distance_2)
 end
 
-function tan(a) return sin(a)/cos(a) end
+--function tan(a) return sin(a)/cos(a) end
 
 function cable_buckle(p1, p2)
   tx = distance
@@ -1975,190 +2219,17 @@ end
 --------------------------------
 -- physics ---------------------
 
-function physics()
-  gravity()
-
-  sky.offset[1] = (
-      sky.offset[1]
-    + sky.vector[1]
-  )
-  cityscape.offset[1] = (
-      cityscape.offset[1]
-    + cityscape.vector[1]
-  )
-  nearground.offset[1] = (
-      nearground.offset[1]
-    + nearground.vector[1]
-  )
-  foreground.offset[1] = ceil(
-      foreground.offset[1]
-    + foreground.vector[1]
-  )
-
-  if mode == 'play' then
-    for m in all(meteors) do
-      mh = hitboxes.meteor(m)
-      if intersect(t, mh) then
-        destroying = m
-        if jump or trick == 'charge' or trick == 'meteor' then
-          m[7] = false
-          m[8] = frame
-          add(eventloop, 'destroy_meteor')
-        elseif m[7] and alive == true then
-          add(eventloop, 'gameover')
-        end
-      end
-    end
-
-    for m in all(meteors) do
-      if m[2] > 0 then
-        crashing = m
-        add(eventloop, 'impact')
-      end
-    end
-
-    for m in all(meteors) do
-      add(m[6], {m[1], m[2], frame})
-      m[1] = m[1] + m[3]
-      m[2] = m[2] + m[4]
-    end
-  end
-
-  if mode == 'play' and paused == false then
-    t = hitboxes.trex()
-    for cactus in all(cacti) do
-      c = hitboxes.cactus(cactus)
-      if intersect(t, c) then
-        if jump or trick == 'charge' or trick == 'meteor' then
-          if jump then
-            can_charge = false
-          end
-          actions.destroy_cactus(cactus)
-        elseif cactus.alive == true then
-          add(eventloop, 'gameover')
-        end
-      end
-    end
-
-
-    for l in all(lava) do
-      lh = hitboxes.lava(l)
-      if intersect(t, lh) then
-        add(eventloop, 'gameover')
-      end
-    end
-
-  end
-end
-
-
-
-function gravity()
-  if alive == false then
-    if skull.offset[2] < groundlevel then
-      skull.vector[2] = skull.vector[2] + 0.25
-    end
-    if board.offset[2] < groundlevel then
-      board.vector[2] = board.vector[2] + 0.25
-    end
-  end
-
-  if altitude >= groundlevel then
-    return
-  end
-
-  air = abs(altitude) / 128
-
-  if trick == 'charge' then
-    ru1 = 3.14159 / 32
-    run = ru1 * (charge+8) / 1
-    vec = sin(run) * 0.6
-    --lift = vec
-    lift = min(lift + vec / 50, 0.1)
-    mul = 0.1
-    if charge > 30 then
-      mul = 0.5
-    elseif charge > 20 then
-      mul = 0.3
-    end
-    --lift = lift + vec * 0.1
-
-    if altitude < -63 then
-      lift = lift + 0.1
-    end
-    if altitude > -8 and lift > 1 then
-      lift = lift - 1
-      lift = 0
-    end
-    --nothing lol
-  elseif trick == 'grind' and groundlevel != 0 then
-    altitude = groundlevel
-  elseif lift < 0 then
-    if trick == 'ollie' then
-      mul = 0.6
-    else
-      mul = 1
-    end
-    --pop
-    lift = lift + (0.25 * mul)
-  elseif lift < 0.5 and trick == 'ollie' then
-    --hang
-    lift = lift + 0.25 * 0.1
-  elseif trick == 'meteor' then
-    speedup = false
-    nearest = true
-    height = 0-altitude
-    for c in all(cacti) do
-      ahead = c.offset[1] > distance
-      if ahead == true then
-        gap = c.offset[1] - distance
-        if nearest == true then
-
-          if gap < 32 and height > 32 then
-            lift = 8
-            speedup = true
-          elseif gap < 8 and height > 64 then
-            lift = 9
-            speedup = true
-          elseif gap < 8 and height > 20 then
-            lift = 4
-            speedup = true
-          elseif gap < 4 and height > 10 then
-            lift = 5
-            speedup = true
-          end
-          nearest = false
-        end
-      end
-    end
-    if speedup == false then
-      lift = 3
-    end
-  else
-    --drop
-    lift = min(
-      lift + 0.95 * air,
-      2.5
-    )
-  end
-end
-
 function update_groundlevel()
-  tx = distance
-  tx1 = distance
-  tx2 = distance + trex.size[1]
-  ty = altitude -- trex.size[2]
-
   for c in all(cables) do
     x1 = c[1]
     y1 = c[2]
     x2 = c[3]
     y2 = c[4]
-    if tx+8 >= x1 and tx <= x2 then
+    if distance+8 >= x1 and distance <= x2 then
       p1 = { offset = {x1, y1} }
       p2 = { offset = {x2, y2} }
       buckle = cable_buckle(p1, p2)
-      if trick == 'grind' or ty <= y1 + buckle + 1 then
+      if trick == 'grind' or altitude <= y1 + buckle + 1 then
         above_cable = true
         groundlevel = y1 + buckle
         return
@@ -2170,7 +2241,7 @@ function update_groundlevel()
     x1 = l[1]
     x2 = l[2]
 
-    if tx1 >= x1 and tx2 <= x2 then
+    if distance >= x1 and (distance+trex.size[1]) <= x2 then
       above_lava = true
       groundlevel = 3
       return
@@ -2247,119 +2318,15 @@ hitboxes = {
   end,
 }
 
-function move()
-  if alive == false then
-    board_decel = 0.01
-    skull_decel = 0.04
-
-    if board.vector[1] - board_decel < 0 then
-      board.vector[1] = 0
-    else
-      board.vector[1] = board.vector[1] - board_decel
-    end
-    if board.offset[2] > groundlevel then
-      board.offset[2] = groundlevel
-    end
-
-    if skull.vector[1] - skull_decel < 0 then
-      skull.vector[1] = 0
-    else
-      skull.vector[1] = skull.vector[1] - skull_decel
-    end
-    if skull.offset[2] > groundlevel then
-      skull.offset[2] = groundlevel
-    end
-
-    board.offset[1] = ceil(board.offset[1] + board.vector[1])
-    board.offset[2] = board.offset[2] + board.vector[2]
-    skull.offset[1] = ceil(skull.offset[1] + skull.vector[1])
-    skull.offset[2] = skull.offset[2] + skull.vector[2]
-    return
-  end
-
-  distance = ceil(distance + speed)
-  if trick == 'push' and groundlevel > 0 then
-    altitude = altitude + 3
-    actions.gameover()
-  elseif trick == 'grind' and groundlevel == 0 then
-    actions.release()
-    altitude = altitude
-  elseif trick == 'grind' then
-    altitude = groundlevel - 2
-  else
-    altitude = altitude + lift
-  end
-  if alive and altitude > groundlevel then
-    if groundlevel == 0 then
-      add(eventloop, 'land')
-    else
-      actions.grind()
-    end
-  end
-
-  if trick == 'charge' then
-
-    ru1 = 3.14159 / 32
-    run = ru1 * (charge+8) / 1
-    vec = sin(run) * 0.6
-    mul = 0.1
-    if charge > 30 then
-      mul = 2
-    elseif charge > 20 then
-      mul = 0.3
-    end
-    y = altitude - 1 + vec * mul
-
-    add(charge_trail, {
-      distance + 6,
-      y,
-      frame,
-    })
-  end
-
-  if trick == 'meteor' and flr(distance) % 2 == 0 and altitude < -8 then
-    add(meteor_trail, {
-      distance,
-      altitude,
-      frame,
-    })
-  end
-
-end
-
-
 
 -->8
 --------------------------------
 -- timekeeping -----------------
 
-function dispatch(action)
-  if actions[action] ~= nil then
-    actions[action]()
-  end
-end
-
 function next(queue)
   local v = queue[1]
   del(queue, v)
   return v
-end
-
-function tick()
-  frame = frame + 1
-  for timeout in all(timeouts) do
-    if frame == timeout[1] then
-      add(eventloop, timeout[2])
-      del(timeouts, timeout)
-    end
-  end
-  for interval in all(intervals) do
-    if frame % interval[1] == interval[3] then
-      if interval[2] ~= nil then
-        add(eventloop, interval[2])
-      end
-    end
-  end
 end
 
 function tween(from, to, first_frame, last_frame)
@@ -2370,10 +2337,10 @@ function tween(from, to, first_frame, last_frame)
   return from + (per_frame * frames_now)
 end
 
-function cron(interval)
-  remainder = frame % interval
-  return remainder == 0
-end
+--function cron(interval)
+  --remainder = frame % interval
+  --return remainder == 0
+--end
 
 function loop(interval, limit)
   remainder = frame % interval
@@ -2382,13 +2349,13 @@ function loop(interval, limit)
   return n
 end
 
-function clear(action)
-  for i,timeout in pairs(timeouts) do
-    if timeout[2] == action then
-      del(timeouts, i)
-    end
-  end
-end
+--function clear(action)
+  --for i,timeout in pairs(timeouts) do
+    --if timeout[2] == action then
+      --del(timeouts, i)
+    --end
+  --end
+--end
 
 function after(frames, action)
   add(timeouts, { frame + frames, action })
