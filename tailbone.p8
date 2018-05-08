@@ -13,6 +13,26 @@ function _update60()
 
   frame = frame + 1
 
+  for i,action in pairs(coroutines) do
+    if frame % action[2] == action[3] then
+      status = costatus(action[1])
+      if status == "suspended" then
+        coresume(action[1])
+      else
+        del(coroutines, action)
+      end
+    end
+  end
+
+  for i,action in pairs(queue) do
+    status = costatus(action)
+    if status == "suspended" then
+      coresume(action)
+    else
+      actions[i] = nil
+    end
+  end
+
   for timeout in all(timeouts) do
     if frame == timeout[1] then
       add(eventloop, timeout[2])
@@ -213,7 +233,7 @@ function _update60()
           m[8] = frame
           add(eventloop, 'destroy_meteor')
         elseif m[7] and alive == true then
-          add(eventloop, 'gameover')
+          add(queue, cocreate(gameover))
         end
       end
     end
@@ -250,7 +270,8 @@ function _update60()
           end
           actions.destroy_cactus(cactus)
         elseif cactus.alive == true then
-          add(eventloop, 'gameover')
+          --add(queue, cocreate(gameover))
+          defer(gameover)
         end
       end
     end
@@ -258,7 +279,7 @@ function _update60()
     for l in all(lava) do
       lh = hitboxes.lava(l)
       if intersect(t, lh) then
-        add(eventloop, 'gameover')
+        defer(gameover)
       end
     end
 
@@ -323,7 +344,7 @@ function _update60()
     distance = ceil(distance + speed)
     if trick == 'push' and groundlevel > 0 then
       altitude = altitude + 3
-      actions.gameover()
+      defer(gameover)
     elseif trick == 'grind' and groundlevel == 0 then
       actions.release()
       altitude = altitude
@@ -504,6 +525,7 @@ function _draw()
 
   printr(''..bar, 4, 120, {0,7})
   printr(''..beat, 12, 120, {0,7})
+  printr(''..#coroutines, 120, 120, {0,7})
 
   if mode == 'attract' then
     spr(64, 16, 32, 12, 4)
@@ -613,6 +635,8 @@ frame = 0
 beat = 0
 bar = 0
 phrase = 0
+coroutines = {}
+queue = {}
 timeouts = {}
 intervals = {}
 eventloop = {}
@@ -1401,6 +1425,38 @@ function extend_combo(score, text)
   tricked = frame
 end
 
+function gameover()
+  if paused == false and alive == true then
+    paused = true
+
+    board.offset = {distance, altitude}
+    board.vector = {}
+    board.vector[1] = speed - 1
+    board.vector[2] = lift - 6
+
+    skull.offset = {distance, altitude}
+    skull.vector = {}
+    skull.vector[1] = speed
+    skull.vector[2] = lift - 2
+
+    --combo = nil
+    --combo = {}
+    for c in all(combo) do
+      c.bailed = frame
+    end
+
+    script = {}
+    pool = {}
+    parallax(0)
+    sfx(2, 3)
+    music(-1)
+    sfx(19, 2)
+    trick = 'none'
+    died = frame
+    alive = false
+  end
+end
+
 -->8
 --------------------------------
 -- actions ---------------------
@@ -1502,37 +1558,6 @@ actions = {
     end
   end,
 
-  gameover = function()
-    if paused == false and alive == true then
-      paused = true
-
-      board.offset = {distance, altitude}
-      board.vector = {}
-      board.vector[1] = speed - 1
-      board.vector[2] = lift - 6
-
-      skull.offset = {distance, altitude}
-      skull.vector = {}
-      skull.vector[1] = speed
-      skull.vector[2] = lift - 2
-
-      --combo = nil
-      --combo = {}
-      for c in all(combo) do
-        c.bailed = frame
-      end
-
-      script = {}
-      pool = {}
-      parallax(0)
-      sfx(2, 3)
-      music(-1)
-      sfx(19, 2)
-      trick = 'none'
-      died = frame
-      alive = false
-    end
-  end,
 
   grab = function()
     sfx(8, 3)
@@ -1604,7 +1629,8 @@ actions = {
     every(32*4*4, 'harder')
     beat = 1
     bar = 1
-    every(32, 'next_beat')
+    --every(32, 'next_beat')
+    everyc(32, actions.next_beat)
   end,
 
   next = function()
@@ -1658,9 +1684,12 @@ actions = {
   end,
 
   next_beat = function()
-    beat=beat%4+1
-    if beat == 1 then
-      bar=bar+1
+    while alive do
+      beat=beat%4+1
+      if beat == 1 then
+        bar=bar+1
+      end
+      yield()
     end
   end,
 
@@ -2366,6 +2395,22 @@ function every(interval, action)
     interval,
     action,
     frame % interval,
+  })
+end
+
+function everyc(interval, action)
+  add(coroutines, {
+    cocreate(action),
+    interval,
+    frame % interval,
+  })
+end
+
+function defer(c)
+  add(coroutines, {
+    cocreate(c),
+    frame + 1,
+    0
   })
 end
 
