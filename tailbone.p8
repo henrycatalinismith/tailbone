@@ -82,10 +82,10 @@ function _update60()
       elseif trick == 'charge' and charge > max_charge then
         --actions.pop()
         can_pop = false
-        actions.meteor()
+        actions.slam()
       elseif trick == 'grind' then
         actions.pop()
-      elseif trick == 'meteor' then
+      elseif trick == 'slam' then
         actions.pop()
       end
     else
@@ -98,8 +98,8 @@ function _update60()
       elseif trick == 'ollie' then
         actions.release()
       elseif trick == 'charge' then --and charge > min_charge then
-        actions.meteor()
-      elseif trick == 'meteor' then
+        actions.slam()
+      elseif trick == 'slam' then
         can_charge = true
       elseif trick == 'grind' then
         can_pop = true
@@ -164,7 +164,7 @@ function _update60()
     elseif lift < 0.5 and trick == 'ollie' then
       --hang
       lift = lift + 0.25 * 0.1
-    elseif trick == 'meteor' then
+    elseif trick == 'slam' then
       speedup = false
       nearest = true
       height = 0-altitude
@@ -228,7 +228,7 @@ function _update60()
       mh = hitboxes.meteor(m)
       if intersect(t, mh) then
         destroying = m
-        if jump or trick == 'charge' or trick == 'meteor' then
+        if jump or trick == 'charge' or trick == 'slam' then
           m[7] = false
           m[8] = frame
           add(eventloop, 'destroy_meteor')
@@ -246,8 +246,8 @@ function _update60()
         del(meteors, m)
 
         add(lava, {
-          m[1] - m[5],
-          m[1] + m[5],
+          m[1] - m[5] - 3,
+          m[1] + m[5] + 3,
         })
       end
     end
@@ -264,14 +264,14 @@ function _update60()
     for cactus in all(cacti) do
       c = hitboxes.cactus(cactus)
       if intersect(t, c) then
-        if jump or trick == 'charge' or trick == 'meteor' then
+        if jump or trick == 'charge' or trick == 'slam' then
           if jump then
             can_charge = false
           end
           actions.destroy_cactus(cactus)
         elseif cactus.alive == true then
           --add(queue, cocreate(gameover))
-          defer(gameover)
+          next(gameover)
         end
       end
     end
@@ -279,17 +279,17 @@ function _update60()
     for l in all(lava) do
       lh = hitboxes.lava(l)
       if intersect(t, lh) then
-        defer(gameover)
+        next(gameover)
       end
     end
 
   end
 
-  action = next(eventloop)
+  local action = eventloop[1]
+  del(eventloop, action)
   if actions[action] ~= nil then
     actions[action]()
   end
-
 
   if shake_frames > 0 then
     shake_frames = shake_frames - 1
@@ -344,7 +344,7 @@ function _update60()
     distance = ceil(distance + speed)
     if trick == 'push' and groundlevel > 0 then
       altitude = altitude + 3
-      defer(gameover)
+      next(gameover)
     elseif trick == 'grind' and groundlevel == 0 then
       actions.release()
       altitude = altitude
@@ -381,8 +381,8 @@ function _update60()
       })
     end
 
-    if trick == 'meteor' and flr(distance) % 2 == 0 and altitude < -8 then
-      add(meteor_trail, {
+    if trick == 'slam' and flr(distance) % 2 == 0 and altitude < -8 then
+      add(slam_trail, {
         distance,
         altitude,
         frame,
@@ -511,10 +511,6 @@ function _draw()
     draw_cactus(cactus)
   end
 
-  for biscuit in all(biscuits) do
-    draw('biscuit', biscuit)
-  end
-
   if mode == 'play' and alive == false then
     draw_board()
     draw_skull()
@@ -610,8 +606,8 @@ frames_per_beat = 33
 frames_per_bar = 128
 frames_per_phrase = 254
 
-function bm(n) return ((n-1)*33)/1 end
-function bt(n) return n*16 end
+function bm(n) return ((n-1)*32)/1 end
+--function bt(n) return n*16 end
 
 mode = 'attract'
 level = 1
@@ -647,7 +643,7 @@ skull = {}
 board = {}
 died = nil
 charge_trail = {}
-meteor_trail = {}
+slam_trail = {}
 
 trex = {}
 has_grabbed = false
@@ -661,7 +657,7 @@ groundlevel = 0
 above_lava = 0
 above_cable = 0
 push_speed = 1
-meteor_start_height = 0
+slam_start_height = 0
 
 shake_frames = 0
 
@@ -669,7 +665,6 @@ cacti = {}
 poles = {}
 cables = {}
 lava = {}
-biscuits = {}
 meteors = {}
 crashing = nil
 destroying = nil
@@ -718,8 +713,6 @@ sprites = {
   board_flat = { 72, 0, 8, 8, 0, false },
   board_high = { 80, 0, 8, 8, 0, false },
   board_half = { 88, 0, 8, 8, 0, false },
-
-  biscuit = { 88, 16, 8, 8, 0, false },
 
   board_1 = { 72,  0, 8, 8, 0, false },
   board_2 = { 80,  0, 8, 8, 0, false },
@@ -775,6 +768,9 @@ sprites = {
 }
 
 level_music = {
+  12,
+  13,
+  14,
   10,
   7,
   7,
@@ -785,10 +781,32 @@ level_music = {
 
 levels = {
 
+  {
+    --'overhead',
+    'lone_cactus',
+    'double_cactus',
+    'easy_crater',
+    'easy_crater',
+  },
+
+  {
+    --'overhead',
+    'overhead',
+    'overhead',
+    'lone_cactus',
+    'double_cactus',
+  },
+
+  --{ 'double_deathtrap' },
+  --{ 'overhead' },
+  --{ 'sudden_nearmiss' },
+  --{ 'near_miss' },
+  --{ 'crater' },
+  --{ 'direct_hit' },
   --{ 'volcano_ocean_runway_meteor' },
 
   {
-    'volcano_ocean_runway_meteor',
+    --'volcano_ocean_runway_meteor',
     'lone_cactus',
     'double_cactus',
   },
@@ -905,128 +923,127 @@ pool = {
 
 spots = {
   open_road = {
-    soundtrack = 9,
-    length = bt(4),
+    length = 64,
   },
-  interstate = { length = bt(8) },
+  interstate = { length = 128 },
 
   lone_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3) },
   },
 
   twin_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3), bm(3.5) },
   },
 
   fs_half_twin_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3) },
   },
 
   bs_half_twin_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3.5) },
   },
 
   double_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3), bm(4) },
   },
 
   fs_half_double_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(3) },
   },
 
   bs_half_double_cactus = {
-    length = bt(4),
+    length = 64,
     cacti = { bm(4) },
   },
 
   double_wide = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3), bm(5) },
   },
 
   fs_half_double_wide = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3) },
   },
 
   bs_half_double_wide = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(5) },
   },
 
   double_lighthouse = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3), bm(6) },
   },
 
   fs_half_double_lighthouse = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3) },
   },
 
   bs_half_double_lighthouse = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(6) },
   },
 
   double_clifftop = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3), bm(8) },
   },
 
   fs_half_double_clifftop = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3) },
   },
 
   bs_half_double_clifftop = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(8) },
   },
 
   triple_cactus = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3), bm(7), bm(8) },
   },
 
   quad_cactus = {
-    length = bt(8),
+    length = 128,
     cacti = { bm(3), bm(4), bm(7), bm(8) },
   },
 
   lava_puddle = {
-    length = bt(4),
+    length = 64,
     lava = {{ bm(3)+8, bm(3.5) }},
   },
 
   lava_pool = {
-    length = bt(2),
+    length = 32,
     lava = {{ bm(3)+8, bm(4) }},
   },
 
   lava_lake = {
-    length = bt(4),
+    length = 64,
     lava = {{ bm(3)+8, bm(5)-2 }},
   },
 
   lava_ocean = {
-    length = bt(8),
+    length = 128,
     lava = {{ bm(3)+8, bm(6) }},
   },
 
   lava_deathtrap = {
-    length = bt(8),
+    length = 128,
     lava = {{ bm(3)+8, bm(8) }},
   },
 
   double_puddle = {
-    length = bt(8),
+    length = 128,
     lava = {
       { bm(3), bm(3.5) },
       { bm(7), bm(7.5) },
@@ -1034,7 +1051,7 @@ spots = {
   },
 
   double_pool = {
-    length = bt(8),
+    length = 128,
     lava = {
       { bm(3), bm(4) },
       { bm(7), bm(8) },
@@ -1042,7 +1059,7 @@ spots = {
   },
 
   double_lake = {
-    length = bt(8),
+    length = 128,
     lava = {
       { bm(3), bm(5) },
       { bm(7), bm(9) },
@@ -1050,7 +1067,7 @@ spots = {
   },
 
   double_ocean = {
-    length = bt(16),
+    length = 1024,
     lava = {
       { bm(3), bm(6) },
       { bm(11), bm(14) },
@@ -1058,7 +1075,7 @@ spots = {
   },
 
   double_deathtrap = {
-    length = bt(16),
+    length = 1024,
     lava = {
       { bm(3), bm(8) },
       { bm(11), bm(16) },
@@ -1066,7 +1083,7 @@ spots = {
   },
 
   cactus_lava_gap = {
-    length = bt(16),
+    length = 1024,
     soundtrack = 8,
     cacti = {
       bm(3), bm(5),
@@ -1079,12 +1096,12 @@ spots = {
   },
 
   powerslide = {
-    length = bt(8),
+    length = 128,
     cables = {{ bm(1), bm(3)}}
   },
 
   double_powerslide = {
-    length = bt(8),
+    length = 128,
     cables = {
       { bm(1), bm(3)},
       { bm(3), bm(5)},
@@ -1092,7 +1109,7 @@ spots = {
   },
 
   triple_powerslide = {
-    length = bt(8),
+    length = 128,
     cables = {
       { bm(1), bm(3)},
       { bm(3), bm(5)},
@@ -1101,7 +1118,7 @@ spots = {
   },
 
   volcano_puddle = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'twin_cactus'},
       {'lava_puddle'},
@@ -1109,7 +1126,7 @@ spots = {
   },
 
   volcano_pool = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'double_cactus'},
       {'lava_pool'},
@@ -1117,10 +1134,7 @@ spots = {
   },
 
   volcano_lake = {
-    length = bt(4),
-    biscuits = {
-      { bt(2), 48 },
-    },
+    length = 64,
     layers = {
       {'double_wide'},
       {'lava_lake'},
@@ -1128,7 +1142,7 @@ spots = {
   },
 
   volcano_ocean = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'double_lighthouse'},
       {'lava_ocean'},
@@ -1136,7 +1150,7 @@ spots = {
   },
 
   volcano_deathtrap = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'double_clifftop'},
       {'lava_deathtrap'},
@@ -1144,7 +1158,7 @@ spots = {
   },
 
   indoor_lake = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'powerslide'},
       {'lava_lake'},
@@ -1152,7 +1166,7 @@ spots = {
   },
 
   indoor_ocean = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'double_powerslide'},
       {'lava_ocean'},
@@ -1160,7 +1174,7 @@ spots = {
   },
 
   indoor_volcano_lake = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'double_wide'},
       {'powerslide'},
@@ -1169,7 +1183,7 @@ spots = {
   },
 
   indoor_volcano_ocean = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'double_lighthouse'},
       {'double_powerslide'},
@@ -1178,7 +1192,7 @@ spots = {
   },
 
   lake_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_lake',
@@ -1186,7 +1200,7 @@ spots = {
   },
 
   ocean_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_ocean'
@@ -1194,7 +1208,7 @@ spots = {
   },
 
   deathtrap_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_deathtrap',
@@ -1202,7 +1216,7 @@ spots = {
   },
 
   fs_half_volcano_puddle = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'fs_half_twin_cactus'},
       {'lava_puddle'},
@@ -1210,7 +1224,7 @@ spots = {
   },
 
   bs_half_volcano_puddle = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'bs_half_twin_cactus'},
       {'lava_puddle'},
@@ -1218,7 +1232,7 @@ spots = {
   },
 
   fs_half_volcano_pool = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'fs_half_double_cactus'},
       {'lava_pool'},
@@ -1226,7 +1240,7 @@ spots = {
   },
 
   bs_half_volcano_pool = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'bs_half_double_cactus'},
       {'lava_pool'},
@@ -1234,7 +1248,7 @@ spots = {
   },
 
   fs_half_volcano_lake = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'fs_half_double_wide'},
       {'lava_lake'},
@@ -1242,7 +1256,7 @@ spots = {
   },
 
   bs_half_volcano_lake = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'bs_half_double_wide'},
       {'lava_lake'},
@@ -1250,7 +1264,7 @@ spots = {
   },
 
   fs_half_volcano_ocean = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'fs_half_double_lighthouse'},
       {'lava_ocean'},
@@ -1258,7 +1272,7 @@ spots = {
   },
 
   bs_half_volcano_ocean = {
-    length = bt(4),
+    length = 64,
     layers = {
       {'bs_half_double_lighthouse'},
       {'lava_ocean'},
@@ -1266,7 +1280,7 @@ spots = {
   },
 
   fs_half_volcano_deathtrap = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'fs_half_double_clifftop'},
       {'lava_deathtrap'},
@@ -1274,7 +1288,7 @@ spots = {
   },
 
   bs_half_volcano_deathtrap = {
-    length = bt(8),
+    length = 128,
     layers = {
       {'bs_half_double_clifftop'},
       {'lava_deathtrap'},
@@ -1282,7 +1296,7 @@ spots = {
   },
 
   volcano_lake_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_lake',
@@ -1291,7 +1305,7 @@ spots = {
   },
 
   volcano_ocean_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_ocean',
@@ -1300,7 +1314,7 @@ spots = {
   },
 
   volcano_deathtrap_runway = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_deathtrap',
@@ -1309,7 +1323,7 @@ spots = {
   },
 
   volcano_ocean_runway_meteor = {
-    length = bt(8),
+    length = 128,
     layers = {{
       'powerslide',
       'lava_ocean',
@@ -1325,8 +1339,88 @@ spots = {
     }
   },
 
+  overtake = {
+    length = 16,
+    meteors = {{
+      bm(-3),
+      push_speed*3.5,
+      push_speed*1.0,
+      8
+    }}
+  },
+
+  overhead = {
+    length = 16,
+    meteors = {{
+      bm(6),
+      -push_speed*1.5,
+      push_speed,
+      8
+    }}
+  },
+
+  easy_nearmiss = {
+    length = 16,
+    meteors = {{
+      bm(4),
+      -push_speed*1,
+      push_speed*2,
+      8
+    }}
+  },
+
+  sudden_nearmiss = {
+    length = 16,
+    meteors = {{
+      bm(6),
+      -push_speed*2,
+      push_speed*2,
+      8
+    }}
+  },
+
+  easy_headshot = {
+    length = 16,
+    meteors = {{
+      bm(5),
+      -push_speed*1,
+      push_speed*2,
+      8
+    }}
+  },
+
+  sudden_headshot = {
+    length = 16,
+    meteors = {{
+      bm(7),
+      -push_speed*2,
+      push_speed*2,
+      8
+    }}
+  },
+
+  easy_crater = {
+    length = 16,
+    meteors = {{
+      bm(7),
+      -push_speed*1,
+      push_speed*2,
+      8
+    }}
+  },
+
+  sudden_crater = {
+    length = 16,
+    meteors = {{
+      bm(8),
+      -push_speed*2,
+      push_speed*2,
+      8
+    }}
+  },
+
   apocalypse = {
-    length = bt(1),
+    length = 16,
     meteors = {
       {
         bm(5),
@@ -1378,12 +1472,6 @@ function cue_spot(spot, plus)
     end
   end
 
-  for b in all(spot.biscuits) do
-    add(biscuits, {
-      x + b[1],
-      0 - b[2],
-    })
-  end
   for c in all(spot.cables) do
 
     add(poles, {
@@ -1481,12 +1569,12 @@ actions = {
     shake_frames = 10
 
     if trick == 'charge' then
-    elseif trick == 'meteor' then
+    elseif trick == 'slam' then
       --add(eventloop, 'pop')
     end
 
-    if trick == 'meteor' then
-      lift = max(meteor_start_height/14, -4.5)
+    if trick == 'slam' then
+      lift = max(slam_start_height/14, -4.5)
       cactus.burn = true
       extend_combo(50, 'asteroid')
     else
@@ -1512,8 +1600,8 @@ actions = {
     destroying[3] = 0
     destroying[4] = 0
 
-    if trick == 'meteor' then
-      lift = max(meteor_start_height/14, -4.5)
+    if trick == 'slam' then
+      lift = max(slam_start_height/14, -4.5)
       extend_combo(50, 'asteroid')
     else
       lift = -3
@@ -1522,6 +1610,7 @@ actions = {
 
     trick = 'air'
     can_charge = false
+    after(16, 'enable_charge')
   end,
 
   enable_charge = function()
@@ -1545,7 +1634,7 @@ actions = {
     end
 
     for m in all(meteors) do
-      if m[1] < foreground.offset[1] then
+      if m[1] < foreground.offset[1] and m[3] < 0 then
         del(meteors, m)
       end
     end
@@ -1564,16 +1653,16 @@ actions = {
     trick = 'grab'
     charge_trail = {}
     --lift = 7
-    --meteor_trail = {}
+    --slam_trail = {}
   end,
 
-  meteor = function()
+  slam = function()
     sfx(-1, 3)
     sfx(8, 3)
-    trick = 'meteor'
+    trick = 'slam'
     lift = 7
-    meteor_trail = {}
-    meteor_start_height = altitude
+    slam_trail = {}
+    slam_start_height = altitude
   end,
 
   grind = function()
@@ -1583,7 +1672,7 @@ actions = {
     altitude = groundlevel
     lift = 0
     charge_trail = {}
-    meteor_trail = {}
+    slam_trail = {}
     extend_combo(10, 'powerslide')
   end,
 
@@ -1591,9 +1680,9 @@ actions = {
     sfx(-1, 3)
     landed = frame
     charge_trail = {}
-    meteor_trail = {}
+    slam_trail = {}
     if alive then
-      if trick == 'meteor' then
+      if trick == 'slam' then
         sfx(3, 3)
         shake_frames = 20
       else
@@ -1677,7 +1766,7 @@ actions = {
   end,
 
   harder = function()
-    if max_combo > level and level < #levels then
+    if alive == true and max_combo > level and level < #levels then
       level = level + 1
       actions.music_play()
     end
@@ -1698,7 +1787,7 @@ actions = {
       return true
     end
 
-    music(7)
+    music(9)
 
     beat = 0
     bar = 0
@@ -1749,7 +1838,7 @@ actions = {
     cables = {}
     lava = {}
     charge_trail = {}
-    meteor_trail = {}
+    slam_trail = {}
 
     level = 1
     groundlevel = 0
@@ -2058,7 +2147,7 @@ function draw_trex()
     legs_sprite = 'roll_1'
     board_sprite = 'board_flat'
     board_offset[1] = 2
-  elseif trick == 'meteor' then
+  elseif trick == 'slam' then
     face_sprite = 'growl'
     legs_sprite = 'grab_1'
     board_sprite = 'board_high'
@@ -2126,7 +2215,7 @@ function draw_trex()
     end
   end
 
-  for t in all(meteor_trail) do
+  for t in all(slam_trail) do
     ro = 7 - max(0, (frame - t[3])*1.4)
     ry = 6 - max(0, (frame - t[3])*2)
     circfill(t[1]+6, t[2]-8, ro, 9)
@@ -2313,7 +2402,7 @@ hitboxes = {
   end,
 
   trex = function()
-    if trick == 'meteor' then
+    if trick == 'slam' then
       return {
         offset = {
           distance + 2,
@@ -2352,11 +2441,11 @@ hitboxes = {
 --------------------------------
 -- timekeeping -----------------
 
-function next(queue)
-  local v = queue[1]
-  del(queue, v)
-  return v
-end
+--function next(queue)
+  --local v = queue[1]
+  --del(queue, v)
+  --return v
+--end
 
 function tween(from, to, first_frame, last_frame)
   frame_count = last_frame - first_frame
@@ -2406,14 +2495,13 @@ function everyc(interval, action)
   })
 end
 
-function defer(c)
+function next(c)
   add(coroutines, {
     cocreate(c),
     frame + 1,
     0
   })
 end
-
 
 -->8
 --------------------------------
@@ -2603,14 +2691,14 @@ __sfx__
 01100000032100321500200002000f2100f21500200003000a3100a3150a2150a3000b3100b3150b2150b215082100821500200002000b2100b21500300003000631006315062150030005310053150521505215
 01040000055500555005550055500555005551101000e100045500255002550045500455002100021000210002550025500050000500005500055002500025010255102550025500255002550025500255002551
 0104000011710117101171011710117101171011710117150c5000050000500005000051000510005100051000510005100051000510025010250002500025000251002510025100251002510025100251002515
-01100000030450304003145006050a0450a0400a145006050f0450f0400f145090000c7050b7050c1050030500000000000000000000000000000000000000000000000000000000000000000000000000000000
+011000000f0450f0000f145006050a0450a0400a145006050f0450f04003145090000f0450f1050f1050030500000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100000006150061500615000000b616096150b61609616006150061500615000000b616096160b6150961500000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100000030400304503105007000f0400f04503105030050a0400a0450a100000000b0400b0450b10500000080400804508105000000b0400b0450b105000000604006045061050000005040050450510505105
 011000000b6150b6052f605240001361513605136150c0000b61518005136050c005136151f60500005000050b615180052360518005136151f60513615180000b6150b6051361518005136152b6051360513615
 011000000b6150b6150b615240001361513605136150c0000b61518005136150c005136151f60500005000050b615180050b61518005136151f60513615180000b6150b6151361518005136152b6051361513605
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0110000003040030450f0450f0400f0400f04503105030050a0400a0450b0450b0400b0400b0450b1050000008040080450b0450b0400b0400b0450b105000000604006045050450504505040050450504505045
+0110000003140031450f7450f7400f7400f74503105030050a1400a1450b7450b7400b7400b7450b1050000008140081450b7450b7400b7400b7450b105000000614006145057450574505740057450574505745
+0110000003540035450f5450f5450f5400f5450f5450f5450a5400a5450b5450b5450b5400b5450b5450b54508540085450b5450b5450b5400b5450b5450b5450654006545055450554505540055450554505545
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2656,9 +2744,9 @@ __music__
 03 18194040
 03 1a1b4040
 03 1a1c4040
-00 00000000
-00 00000000
-00 00000000
+03 1d114040
+03 1e114040
+03 1f114140
 00 00000000
 00 00000000
 00 00000000
