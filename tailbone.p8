@@ -117,6 +117,47 @@ function _update60()
 
   -- gravity
 
+  -- add(fireworks, {
+  -- 1  cityscape.offset[1], -- x offset
+  -- 2  0, -- y offset
+  -- 3  0, -- angular speed
+  -- 4  3, -- lift
+  -- 5  2, -- fuel
+  -- 6  20, -- fuse
+  -- 7  4, -- gunpowder
+  -- 8  12, -- color
+  --  })
+
+  for f in all(fireworks) do
+    if f[6] > 0 then
+      if f[5] > 0 then
+        f[5] = f[5] - 1 -- burn fuel
+        f[4] = f[4] + 1 -- accelerate
+      end
+      f[2] = f[2] - f[4] -- fly
+      f[4] = max(f[4] - 1, -2) -- fall
+      f[6] = f[6] - 1 -- burn fuse
+    else
+      if f[9] == nil then
+        f[10] = frame
+        f[9] = {}
+        for i = 1,16 do
+          add(f[9], {
+            f[1],
+            f[2],
+            f[3] + (1-rnd(2))/2,
+            f[4] + (1-rnd(2))/2,
+          })
+        end
+      end
+      for p in all(f[9]) do
+        p[1] = p[1] - p[3] -- fly
+        p[2] = p[2] - p[4] -- fly
+        p[4] = max(p[4] - 0.1, -2) -- fall
+      end
+    end
+  end
+
   if alive == false then
     if skull.offset[2] < groundlevel then
       skull.vector[2] = skull.vector[2] + 0.25
@@ -304,7 +345,8 @@ function _update60()
     shake_frames = shake_frames - 1
   end
 
-  if new_combo_score > combo_score then
+  if new_combo_score > combo_score and alive == true then
+    --combo_score = ceil(tween(10, 1, tricked, tricked+20))
     combo_score = ceil(tween(
       old_combo_score, new_combo_score,
       tricked, tricked + 20
@@ -408,7 +450,10 @@ function _update60()
     end
     charge = charge + 1
   elseif trick == 'grind' and frame % 4 == 0 then
-    combo_score = combo_score + 5
+    combo_score = combo_score + 8
+    if frame % 16 == 0 then
+      increase_special(8)
+    end
   end
 end
 
@@ -435,6 +480,28 @@ function _draw()
       sspr(102, 0, 14, 8, i, 1)
     elseif i % 256 == 0 then
       sspr(118, 0, 10, 8, i, 1)
+    end
+  end
+
+  -- add(fireworks, {
+  --    cityscape.offset[1], -- x offset
+  --    0, -- y offset
+  --    0, -- angular speed
+  --    3, -- lift
+  --    20, -- fuse
+  --    4, -- gunpowder
+  --    12, -- color
+  --  })
+  for f in all(fireworks) do
+    if f[6] > 0 then
+      circfill(f[1], f[2], 0, 10)
+    else
+      for p in all(f[9]) do
+        --circfill(p[1], p[2], 0, f[8])
+        circfill(p[1], p[2], 0,
+          ({11,12,8,14})[flrrnd(4)+1]
+        )
+      end
     end
   end
 
@@ -530,9 +597,9 @@ function _draw()
   -- ui
   camera(0, 0)
 
-  printr(''..bar, 4, 120, {0,7})
-  printr(''..beat, 12, 120, {0,7})
-  printr(''..#coroutines, 120, 120, {0,7})
+  --printr(''..bar, 4, 120, {0,7})
+  --printr(''..beat, 12, 120, {0,7})
+  --printr(''..#coroutines, 120, 120, {0,7})
 
   if mode == 'attract' then
     spr(64, 16, 32, 12, 4)
@@ -550,14 +617,16 @@ function _draw()
     end
   end
 
-  colors = {0,7}
-  if #combo > 0 then
-    if combo[1].bailed then
-      colors = {0,8}
-    elseif combo[1].landed then
-      colors = {0,11}
+  if show_bonus == true then
+    string = '+1000'
+    per_n = 8
+    x = 60 - (((#string+1)/2)*per_n)
+    ccolors = {7,1,8}
+    for i=1,#string do
+      ccolors = {loop(32,5),7,1,8}
+      asasas = 0 - loop(16, 2)
+      printr(sub(string, i, i), x+i*per_n, 32+asasas, ccolors)
     end
-    printr(''..multiplier, 8, 8, colors)
   end
 
   score_x = 120 - (#(''..n)) * 4
@@ -566,15 +635,9 @@ function _draw()
 
   start_y = 8
 
-  if #combo > 1 then
-    last_age = frame - combo[#combo].frame
-    slide = max(0, 10 - last_age)
-    start_y = (8 - (#combo - 1) * 10) + slide
-  end
-
   for i,t in pairs(combo) do
-    x = #(''..combo_length) * 4
-    y = start_y + ((i-1) * 10)
+    --x = #(''..combo_length) * 4
+    --y = start_y + ((i-1) * 10)
 
     if t.bailed then
       text_colors = {0,8}
@@ -588,15 +651,35 @@ function _draw()
     end
 
     --printr(''..t.score, x, y, {7,0})
-    printr(t.text, x + 16, y, text_colors)
 
     if t.landed and age > 20 then
       del(combo, t)
       --combo_score = 0
     end
   end
-  if alive == true or frame-died<60 then
+  if mode == 'play' and (alive == true or frame-died<60) then
     printr(n, score_x, 8, score_colors)
+    --printr(n, 8, 8, score_colors)
+  end
+
+  --if alive == true or frame-died<60 then
+  if mode=='play' and alive == true then
+    local barw = 64
+    local spew = special
+    if spew != lspew and lspew != nil and frame-special_changed<19 then
+      spew = tween(lspew, spew, special_changed, special_changed+20)
+    end
+    rect(6, 6, 6+barw+4, 16, 13)
+    if show_bonus == true then
+      ibc = ({11,12,8,14})[flrrnd(4)+1]
+    else
+      ibc = 12
+    end
+    rect(7, 7, 7+barw+2, 15, ibc)
+    if spew > 0 then
+      rectfill(8, 8, 8+spew, 14, 8)
+    end
+    lspew = spew
   end
 
   if paused == true and alive == false then
@@ -604,6 +687,17 @@ function _draw()
       dead_for = flr(min(frame - died - 60, 40) / 10 * 2)
       sw = ({20,36,52,60,78,92,112,128})[dead_for]
       sspr(0, 64, sw, 32, 0, 32)
+    end
+    if frame - died > 120 then
+      --printr('lol', 64, 64, {7,0})
+      string = ''..final_score
+      per_n = 8
+      local x = 60 - (((#string+1)/2)*per_n)
+      ccolors = {7,1,8}
+      for i=1,#string do
+        printr(sub(string, i, i), x+i*per_n, 72, ccolors)
+      end
+
     end
   end
 
@@ -623,6 +717,10 @@ function bm(n) return ((n-1)*32)/1 end
 mode = 'attract'
 level = 1
 score = 0
+special = 0
+special_changed = 0
+special_animating = false
+beat_frame = 0
 old_score = 0
 new_score = 0
 combo_score = 0
@@ -632,6 +730,8 @@ new_combo_score = 0
 old_combo_score = 0
 landed = nil
 tricked = nil
+show_bonus = false
+bonused = nil
 last_attack = 0
 paused = false
 alive = false
@@ -664,8 +764,7 @@ has_grabbed = false
 can_pop = true
 can_charge = true
 min_charge = 2
-default_max_charge = 64
-max_charge = default_max_charge
+max_charge = 64
 overtaking = false
 cue_jump = false
 groundlevel = 0
@@ -681,6 +780,7 @@ poles = {}
 cables = {}
 lava = {}
 meteors = {}
+fireworks = {}
 crashing = nil
 destroying = nil
 
@@ -816,7 +916,7 @@ level_music = {
 
 levels = {
 
-  { 'bs_twin_cactus_crater', },
+  --{ 'deathtrap_runway', },
   --{ 'apocalypse' },
 
   {
@@ -916,7 +1016,7 @@ pool = {
   -- 'volcano_ocean',
   -- 'volcano_deathtrap',
   --
-  -- ½volcanos -
+  -- Â½volcanos -
   -- 'fs_half_volcano_puddle',
   -- 'bs_half_volcano_puddle',
   -- 'fs_half_volcano_pool',
@@ -1017,41 +1117,41 @@ spots = {
   -- .... .... .... .... .... .... .... ....
   interstate = layers(128),
 
-  -- .... .... .... ...🌵
+  -- .... .... .... ...ððµ
   lone_cactus = cactus(64, 64),
 
-  -- .... .... .... ...🌵 ...🌵
+  -- .... .... .... ...ððµ ...ððµ
   twin_cactus = cactus(64, 64, 80),
 
-  -- .... .... .... ...🌵 .... ...🌵
+  -- .... .... .... ...ððµ .... ...ððµ
   double_cactus = cactus(64, 64, 96),
 
-  -- .... .... .... ...🌵 .... .... .... ...🌵
+  -- .... .... .... ...ððµ .... .... .... ...ððµ
   double_wide = cactus(128, 64, 128),
 
-  -- .... .... .... ...🌵 .... .... .... .... .... ...🌵
+  -- .... .... .... ...ððµ .... .... .... .... .... ...ððµ
   double_lighthouse = cactus(128, 64, 160),
 
-  -- .... .... .... ...🌵 .... .... .... .... .... .... .... .... .... ...🌵
+  -- .... .... .... ...ððµ .... .... .... .... .... .... .... .... .... ...ððµ
   double_clifftop = cactus(128, 64, 224),
 
-  -- .... .... .... ...🌵 .... .... .... .... .... .... .... ...🌵 .... ...🌵
+  -- .... .... .... ...ððµ .... .... .... .... .... .... .... ...ððµ .... ...ððµ
   triple_cactus = cactus(128, 64, 192, 224),
 
-  -- .... .... .... ...🌵 .... ...🌵 .... .... .... .... .... ...🌵 .... ...🌵
+  -- .... .... .... ...ððµ .... ...ððµ .... .... .... .... .... ...ððµ .... ...ððµ
   quad_cactus = cactus(128, 64, 96, 192, 224),
 
-  -- .... .... .... ...🌵 ...🌵 ...🌵 ...🌵 ....
+  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ....
   cactus_woods = cactus(128, 64, 80, 96, 112),
 
-  -- .... .... .... ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵
+  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ
   cactus_forest = cactus(
     128,
     64, 80, 96, 112,
     128, 144, 160, 176
   ),
 
-  -- .... .... .... ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵 ...🌵
+  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ
   cactus_jungle = cactus(
     128,
     64, 80, 96, 112,
@@ -1445,11 +1545,11 @@ end
 
 function extend_combo(score, text)
   combo_length = combo_length + 1
-  add(combo, {
-    text = text,
-    frame = frame,
-    score = score,
-  })
+  --add(combo, {
+    --text = text,
+    --frame = frame,
+    --score = score,
+  --})
   if combo_length > max_combo then
     max_combo = combo_length
   end
@@ -1466,6 +1566,7 @@ end
 function gameover()
   if paused == false and alive == true then
     paused = true
+    final_score = combo_score
 
     board.offset = {distance, altitude}
     board.vector = {}
@@ -1492,7 +1593,47 @@ function gameover()
     trick = 'none'
     died = frame
     alive = false
+    reset_special()
   end
+end
+
+function firework()
+  add(fireworks, {
+    cityscape.offset[1] + 100, -- x offset
+    0, -- y offset
+    0, -- angular speed
+    2, -- lift
+    6, -- fuel
+    6, -- fuse
+    4, -- gunpowder
+    ({11,12,8,14})[flrrnd(4)+1], -- color
+  })
+end
+
+function increase_special(n)
+  special = min(64, special + n)
+  special_changed = frame
+
+  if special >= 64 then
+    show_bonus = true
+    new_combo_score = combo_score+1000
+    old_combo_score = combo_score
+    afterc(30, hide_bonus)
+    afterc(30, reset_special)
+    firework()
+    afterc(8, firework)
+    afterc(16, firework)
+    afterc(24, firework)
+  end
+end
+
+function hide_bonus()
+  show_bonus = false
+end
+
+function reset_special()
+  special = 0
+  special_changed = frame
 end
 
 --------------------------------
@@ -1523,17 +1664,19 @@ actions = {
     end
 
     if trick == 'slam' then
-      lift = max(slam_start_height/14, -3.5)
+      lift = max(slam_start_height/14, -2.5)
       cactus.burn = true
       extend_combo(50, 'asteroid')
       can_charge = false
       after(4, 'enable_charge')
+      increase_special(16)
     else
       lift = -3
       cactus.fall = true
       extend_combo(20, 'stomp')
       can_charge = false
       after(16, 'enable_charge')
+      increase_special(16)
     end
 
     trick = 'air'
@@ -1586,6 +1729,12 @@ actions = {
       end
     end
 
+    for f in all(fireworks) do
+      if f[10] != nil and frame-f[10]>60 then
+        del(fireworks, f)
+      end
+    end
+
     for m in all(meteors) do
       if m[1] < foreground.offset[1] and m[3] < 0 then
         del(meteors, m)
@@ -1631,6 +1780,8 @@ actions = {
 
   land = function()
     sfx(-1, 3)
+    special = max(0, special - 16)
+    special_changed = frame
     landed = frame
     charge_trail = {}
     slam_trail = {}
@@ -1645,14 +1796,6 @@ actions = {
       trick = 'push'
     end
 
-    if #combo > 0 then
-      for c in all(combo) do
-        c.landed = frame
-      end
-      old_score = score
-      new_score = score+combo_score
-      --sfx(18, 3)
-    end
     new_combo_score = 0
     old_combo_score = combo_score
     new_multiplier = 1
@@ -1731,6 +1874,7 @@ actions = {
   next_beat = function()
     while alive do
       beat=beat%4+1
+      beat_frame = frame
       if beat == 1 then
         bar=bar+1
       end
@@ -1762,18 +1906,21 @@ actions = {
   end,
 
   reset = function()
-    max_charge = default_max_charge
     new_score = 0
     old_score = 0
     combo_score = 0
     multiplier = 1
-    combo_length = 1
+    special = 0
+    special_changed = 0
+    combo_length = 0
     new_combo_score = 0
     old_combo_score = 0
     new_multiplier = 1
     old_multiplier = 1
     landed = nil
     tricked = nil
+    show_bonus = false
+    bonused = nil
     last_attack = 0
     trick = 'push'
     mode = 'attract'
@@ -1794,6 +1941,7 @@ actions = {
 
     cacti = {}
     meteors = {}
+    fireworks = {}
     poles = {}
     script = {}
     cables = {}
@@ -2421,8 +2569,8 @@ end
 function loop(interval, limit)
   remainder = frame % interval
   chunk_size = flr(interval / limit)
-  n = flr(remainder / chunk_size)
-  return n
+  local num = flr(remainder / chunk_size)
+  return num
 end
 
 --function clear(action)
@@ -2595,42 +2743,6 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000008888800000888888888000000000888880000000000088888000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000008888888000000000888880000000000088888000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000088888000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00800000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00800000008000080080000800000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00880008008800880088008808000088080000080008888888888800000000000000000000000000000000000000000000000000000000000000000000000000
-00888888008888880088888808888888088888880888888888888880000000000000000000000000000000000000000000000000000000000000000000000000
-00888888008888880088888800888888008888888888888888875880000000000000000000000000000000000000000000000000000000000000000000000000
-000888880008888800088888000888880008888888888888888c5880000000000000000000000000000000000000000000000000000000000000000000000000
-00008888000088880000888800008888000088888888800808888880000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000008880880808888800000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000008800080008888000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000008880000008888000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000888800000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000d00000000000000000000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-dddddddddddddddddddddddd11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000
-dddddddddddddddddddddddd11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000
-ddddddddd1212ddddddddddd111111111c8c8111111111111111111118c8c1111111111100000000000000000000000000000000000000000000000000000000
-dddddddd666666dddddddddd11111111666666111111111111111111666666111111111100000000000000000000000000000000000000000000000000000000
-ddddd6667655556ddddddddd11111666765555611111111111111666765555611111111100000000000000000000000000000000000000000000000000000000
-dddd677776555556dddddddd11116777765555561111111111116777765555561111111100000000000000000000000000000000000000000000000000000000
-ddd6600666666666666666dd11166006666666666666661111166006666666666666661100000000000000000000000000000000000000000000000000000000
-d66600006677a7766000066d166600006677a77660000661166600006677a7766000066100000000000000000000000000000000000000000000000000000000
-d6600770067a9a760077006d16600770067a9a760077006116600770067a9a760077006100000000000000000000000000000000000000000000000000000000
-d6600770067a9a760077006d16600770067a9a760077006116600770067a9a760077006100000000000000000000000000000000000000000000000000000000
-d66000000677a7760000006d166000000677a77600000061166000000677a7760000006100000000000000000000000000000000000000000000000000000000
-dddd0000ddddddddd0000ddd11110000111111111000011111110000111111111000011100000000000000000000000000000000000000000000000000000000
-dddddddddddddddddddddddd11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000
 __sfx__
 000100000d51001510015200152001530015300254003540035400454004540055500555006530095200a52007200062000020000200002000020000200002000020000200002000020000200002000020000200
 0102000009010090100901009010026000260002600016000160005600016000b6000e600086010460104605026000060009600046000260009600036000a6000860004600006000860006600066000560000000
@@ -2665,7 +2777,7 @@ __sfx__
 0110000003140031450f7450f7400f7400f74503105030050a1400a1450b7450b7400b7400b7450b1050000008140081450b7450b7400b7400b7450b105000000614006145057450574505740057450574505745
 0110000003540035450f5450f5450f5400f5450f5450f5450a5400a5450b5450b5450b5400b5450b5450b54508540085450b5450b5450b5400b5450b5450b5450654006545055450554505540055450554505545
 0110000003040030450f0050f0000f0400f04503105030050a0400a0450b0450b0400b0400b0450b1050000008040080450b0050b0000b0400b0450b105000000604006045050450504505040050450504505045
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010b00000065000655106000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
