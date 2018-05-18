@@ -720,6 +720,7 @@ score = 0
 special = 0
 special_changed = 0
 special_animating = false
+has_specialed = false
 beat_frame = 0
 old_score = 0
 new_score = 0
@@ -915,73 +916,28 @@ level_music = {
 }
 
 levels = {
+  {'lone_cactus'},
+  {'double_cactus'},
+  {'volcano_pool'},
+  {'indoor_lake'},
 
   --{ 'deathtrap_runway', },
   --{ 'apocalypse' },
-
-  {
-    'fs_twin_cactus_crater',
-    'bs_twin_cactus_crater',
-  },
-
-  {
-    'lone_cactus',
-    'double_cactus',
-    'easy_crater',
-  },
-
-  {
-    'lone_cactus',
-    'double_cactus',
-    'overhead',
-    'overhead',
-  },
-
+  --{ 'fs_twin_cactus_crater', 'bs_twin_cactus_crater', },
+  --{ 'lone_cactus', 'double_cactus', },
+  --{ 'lone_cactus', 'double_cactus', 'overhead', },
   --{ 'overhead' },
   --{ 'sudden_nearmiss' },
   --{ 'near_miss' },
   --{ 'crater' },
   --{ 'direct_hit' },
   --{ 'volcano_ocean_runway_meteor' },
+  --{ --'volcano_ocean_runway_meteor', 'lone_cactus', 'double_cactus', },
+  --{ 'double_cactus', 'double_wide', 'quad_cactus', 'lava_pool', },
+  --{ 'lone_cactus', 'double_cactus', 'double_wide', 'volcano_pool', 'fs_half_volcano_pool', 'indoor_lake', 'volcano_lake_runway', },
+  --{ 'lone_cactus', 'double_wide', 'volcano_pool', 'volcano_lake', 'bs_half_volcano_lake', 'fs_half_volcano_lake', 'volcano_ocean_runway', },
+  --{ --'volcano_ocean_runway_meteor', 'volcano_deathtrap_runway', }
 
-  {
-    --'volcano_ocean_runway_meteor',
-    'lone_cactus',
-    'double_cactus',
-  },
-
-  {
-    'double_cactus',
-    'double_wide',
-    'quad_cactus',
-    'lava_pool',
-  },
-
-
-  {
-    'lone_cactus',
-    'double_cactus',
-    'double_wide',
-    'volcano_pool',
-    'fs_half_volcano_pool',
-    'indoor_lake',
-    'volcano_lake_runway',
-  },
-
-  {
-    'lone_cactus',
-    'double_wide',
-    'volcano_pool',
-    'volcano_lake',
-    'bs_half_volcano_lake',
-    'fs_half_volcano_lake',
-    'volcano_ocean_runway',
-  },
-
-  {
-    --'volcano_ocean_runway_meteor',
-    'volcano_deathtrap_runway',
-  }
 }
 
 pool = {
@@ -1616,6 +1572,7 @@ function increase_special(n)
 
   if special >= 64 then
     show_bonus = true
+    has_specialed = true
     new_combo_score = combo_score+1000
     old_combo_score = combo_score
     afterc(30, hide_bonus)
@@ -1676,7 +1633,7 @@ actions = {
       extend_combo(20, 'stomp')
       can_charge = false
       after(16, 'enable_charge')
-      increase_special(16)
+      increase_special(8)
     end
 
     trick = 'air'
@@ -1698,9 +1655,11 @@ actions = {
     if trick == 'slam' then
       lift = max(slam_start_height/14, -4.5)
       extend_combo(50, 'asteroid')
+      increase_special(32)
     else
       lift = -3
       extend_combo(20, 'stomp')
+      increase_special(16)
     end
 
     trick = 'air'
@@ -1780,7 +1739,7 @@ actions = {
 
   land = function()
     sfx(-1, 3)
-    special = max(0, special - 16)
+    special = 0
     special_changed = frame
     landed = frame
     charge_trail = {}
@@ -1810,11 +1769,16 @@ actions = {
     music(level_music[level])
   end,
 
+  start_difficulty_tick = function()
+    every(32*8, 'harder')
+  end,
+
   music_start = function()
     music(-1)
     music(level_music[level])
     --every(frames_per_phrase*4, 'harder')
-    every(32*4*4, 'harder')
+    --every(32*4*4, 'harder')
+    every(32*8, 'harder')
     beat = 1
     bar = 1
     --every(32, 'next_beat')
@@ -1865,9 +1829,16 @@ actions = {
   end,
 
   harder = function()
-    if alive == true and max_combo > level and level < #levels then
+    if alive == true and has_specialed == true and level < #levels then
       level = level + 1
-      actions.music_play()
+
+      script = {}
+      key = flr(rnd(#levels[level])) + 1
+      add(script, levels[level][key])
+
+      has_specialed = false
+      after(32, 'music_play')
+      --actions.music_play()
     end
   end,
 
@@ -1899,6 +1870,7 @@ actions = {
     pool = medium_pool
     add(eventloop, 'next')
     after(32*4, 'music_start')
+    after(32*3, 'start_difficulty_tick')
   end,
 
   release = function()
@@ -1912,6 +1884,7 @@ actions = {
     multiplier = 1
     special = 0
     special_changed = 0
+    has_specialed = false
     combo_length = 0
     new_combo_score = 0
     old_combo_score = 0
