@@ -206,34 +206,26 @@ function _update60()
       --hang
       lift = lift + 0.25 * 0.1
     elseif trick == 'slam' then
-      speedup = false
       nearest = true
       height = 0-altitude
+      lift = 3
       for c in all(cacti) do
         ahead = c.offset[1] > distance
         if ahead == true then
           gap = c.offset[1] - distance
           if nearest == true then
-
             if gap < 32 and height > 32 then
               lift = 8
-              speedup = true
             elseif gap < 8 and height > 64 then
               lift = 9
-              speedup = true
             elseif gap < 8 and height > 20 then
               lift = 4
-              speedup = true
             elseif gap < 4 and height > 10 then
               lift = 5
-              speedup = true
             end
             nearest = false
           end
         end
-      end
-      if speedup == false then
-        lift = 3
       end
     else
       --drop
@@ -353,15 +345,6 @@ function _update60()
     ))
   else
     old_combo_score = combo_score
-  end
-
-  if new_multiplier < multiplier then
-    multiplier = max(0, ceil(tween(
-      old_multiplier, new_multiplier,
-      landed, landed + 10
-    )))
-  else
-    old_multiplier = multiplier
   end
 
   if alive == false then
@@ -669,15 +652,18 @@ function _draw()
     if spew != lspew and lspew != nil and frame-special_changed<19 then
       spew = tween(lspew, spew, special_changed, special_changed+20)
     end
-    rect(6, 6, 6+barw+4, 16, 13)
-    if show_bonus == true then
-      ibc = ({11,12,8,14})[flrrnd(4)+1]
-    else
-      ibc = 12
-    end
-    rect(7, 7, 7+barw+2, 15, ibc)
-    if spew > 0 then
-      rectfill(8, 8, 8+spew, 14, 8)
+
+    if (spew > 0) then
+      rect(6, 6, 6+barw+4, 16, 13)
+      if show_bonus == true then
+        ibc = ({11,12,8,14})[flrrnd(4)+1]
+      else
+        ibc = 12
+      end
+      rect(7, 7, 7+barw+2, 15, ibc)
+      if spew > 0 then
+        rectfill(8, 8, 8+spew, 14, 8)
+      end
     end
     lspew = spew
   end
@@ -722,11 +708,7 @@ special_changed = 0
 special_animating = false
 has_specialed = false
 beat_frame = 0
-old_score = 0
-new_score = 0
 combo_score = 0
-new_multiplier = 1
-old_multiplier = 1
 new_combo_score = 0
 old_combo_score = 0
 landed = nil
@@ -1510,10 +1492,6 @@ function extend_combo(score, text)
     max_combo = combo_length
   end
 
-  multiplier = combo_length
-  new_multiplier = multiplier
-  old_multiplier = multiplier
-  --combo_score = combo_score + score
   new_combo_score = combo_score+score
   old_combo_score = combo_score
   tricked = frame
@@ -1757,8 +1735,6 @@ actions = {
 
     new_combo_score = 0
     old_combo_score = combo_score
-    new_multiplier = 1
-    old_multiplier = multiplier
 
     altitude = 0
     lift = 0
@@ -1778,7 +1754,7 @@ actions = {
     music(level_music[level])
     --every(frames_per_phrase*4, 'harder')
     --every(32*4*4, 'harder')
-    every(32*8, 'harder')
+    --every(32*8, 'harder')
     beat = 1
     bar = 1
     --every(32, 'next_beat')
@@ -1878,18 +1854,13 @@ actions = {
   end,
 
   reset = function()
-    new_score = 0
-    old_score = 0
     combo_score = 0
-    multiplier = 1
     special = 0
     special_changed = 0
     has_specialed = false
     combo_length = 0
     new_combo_score = 0
     old_combo_score = 0
-    new_multiplier = 1
-    old_multiplier = 1
     landed = nil
     tricked = nil
     show_bonus = false
