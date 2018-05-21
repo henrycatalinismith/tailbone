@@ -112,7 +112,6 @@ function _update60()
 
   end
 
-
   update_groundlevel()
 
   -- gravity
@@ -239,21 +238,21 @@ function _update60()
 
   -- movement
 
-  sky.offset[1] = (
-      sky.offset[1]
-    + sky.vector[1]
+  sky_offset = (
+      sky_offset
+    + sky_speed
   )
-  cityscape.offset[1] = (
-      cityscape.offset[1]
-    + cityscape.vector[1]
+  cityscape_offset = (
+      cityscape_offset
+    + cityscape_speed
   )
-  nearground.offset[1] = (
-      nearground.offset[1]
-    + nearground.vector[1]
+  nearground_offset = (
+      nearground_offset
+    + nearground_speed
   )
-  foreground.offset[1] = ceil(
-      foreground.offset[1]
-    + foreground.vector[1]
+  foreground_offset = ceil(
+      foreground_offset
+    + foreground_speed
   )
 
   if mode == 'play' then
@@ -442,8 +441,8 @@ end
 
 function _draw()
   -- sky
-  x = ceil(sky.offset[1])
-  y = ceil(sky.offset[2])
+  x = ceil(sky_offset)
+  y = -108
   camera(x, y)
   rectfill(x, y, x + 128, 0, 1)
 
@@ -452,9 +451,8 @@ function _draw()
   end
 
   -- cityscape
-  x = ceil(cityscape.offset[1])
-  y = ceil(cityscape.offset[2])
-  camera(x, y)
+  x = ceil(cityscape_offset)
+  camera(x, -94)
   rectfill(x, 9, x + 128, 9, 2)
   for i = (x - 15),(x + 128) do
     if i % 98 == 0 then
@@ -489,9 +487,8 @@ function _draw()
   end
 
   -- nearground
-  x = ceil(nearground.offset[1])
-  y = ceil(nearground.offset[2])
-  camera(x, y)
+  x = ceil(nearground_offset)
+  camera(x, -104)
   rectfill(x, 0, x + 128, 3, 4)
 
   -- plants
@@ -508,8 +505,8 @@ function _draw()
   end
 
   -- foreground
-  x = flr(foreground.offset[1])
-  y = flr(foreground.offset[2])
+  x = flr(foreground_offset)
+  y = -108
 
   if shake_frames > 0 then
     y = y + (rnd(2)-1)
@@ -780,9 +777,6 @@ tricks = {
 trick = 'none'
 charge = 0
 
-foreground = {}
-nearground = {}
-cityscape = {}
 sky = {}
 
 function split(string)
@@ -1533,7 +1527,7 @@ end
 
 function firework()
   add(fireworks, {
-    cityscape.offset[1] + 100, -- x offset
+    cityscape_offset + 100, -- x offset
     0, -- y offset
     0, -- angular speed
     2, -- lift
@@ -1652,14 +1646,14 @@ actions = {
 
   gc = function()
     for i,cactus in pairs(cacti) do
-      if cactus.offset[1] < foreground.offset[1] then
+      if cactus.offset[1] < foreground_offset then
         del(cacti, i)
       end
     end
 
     printh(stat(1))
     for i,l in pairs(lava) do
-      if l[2] < foreground.offset[1] then
+      if l[2] < foreground_offset then
         printh('gc')
         printh(l[2])
         del(lava, l)
@@ -1673,13 +1667,13 @@ actions = {
     end
 
     for m in all(meteors) do
-      if m[1] < foreground.offset[1] and m[3] < 0 then
+      if m[1] < foreground_offset and m[3] < 0 then
         del(meteors, m)
       end
     end
 
     for i,pole in pairs(poles) do
-      if pole.offset[1] < foreground.offset[1] - 64 then
+      if pole.offset[1] < foreground_offset - 64 then
         poles[i] = nil
         del(poles, poles[i])
       end
@@ -1750,6 +1744,9 @@ actions = {
   end,
 
   music_start = function()
+    if alive == false then
+      return
+    end
     music(-1)
     music(level_music[level])
     --every(frames_per_phrase*4, 'harder')
@@ -1840,7 +1837,7 @@ actions = {
     bar = 0
     phrase = 0
     mode = 'play'
-    distance = foreground.offset[1] + trex.size[1]
+    distance = foreground_offset + trex.size[1]
 
     script = {'open_road'}
     pool = medium_pool
@@ -1901,15 +1898,14 @@ actions = {
     altitude = 0
     trex.vector = { push_speed, 0 }
     trex.size = { 16, 16 }
-    foreground.offset = { -10, -108 }
-    foreground.vector = { speed, 0 }
-    foreground.zoom = 1
-    nearground.offset = { -10, -104 }
-    nearground.vector = { 1, 0 }
-    cityscape.offset = { -10, -94 }
-    cityscape.vector = { 1, 0 }
-    sky.offset = { -10, -108 }
-    sky.vector = { 0.5, 0 }
+    foreground_offset = -10
+    foreground_speed = speed
+    nearground_offset = - 10
+    nearground_speed = 1
+    cityscape_offset = -10
+    cityscape_speed = 1
+    sky_offset = -10
+    sky_speed = 0.5
     parallax(2)
     every(60, 'gc')
     cls()
@@ -1921,24 +1917,24 @@ actions = {
 -- rendering -------------------
 
 function parallax(s)
-  foreground.offset[1] = distance - 16
+  foreground_offset = distance - 16
   if s == 0 then
-    foreground.vector[1] = 0
-    nearground.vector[1] = 0
-    cityscape.vector[1] = 0
-    sky.vector[1] = 0
+    foreground_speed = 0
+    nearground_speed = 0
+    cityscape_speed = 0
+    sky_speed = 0
   elseif s == 1 then
     speed = push_speed
-    foreground.vector[1] = speed
-    nearground.vector[1] = 0.5
-    cityscape.vector[1] = 0.5
-    sky.vector[1] = 0.25
+    foreground_speed = speed
+    nearground_speed = 0.5
+    cityscape_speed = 0.5
+    sky_speed = 0.25
   elseif s == 2 then
     speed = 2
-    foreground.vector[1] = speed
-    nearground.vector[1] = 1.5
-    cityscape.vector[1] = 1.5
-    sky.vector[1] = 1
+    foreground_speed = speed
+    nearground_speed = 1.5
+    cityscape_speed = 1.5
+    sky_speed = 1
   end
 end
 
@@ -2074,7 +2070,7 @@ function draw_lava()
       9
     )
 
-    cx = x1 - foreground.offset[1]
+    cx = x1 - foreground_offset
     cy = 0
     cw = x2 - x1
     ch = 16
@@ -2250,21 +2246,14 @@ function draw_trex()
         line(from[1]+3, fl(3), to[1]+3, tl(3), 10)
         line(from[1]+2, fl(2), to[1]+2, tl(2), 11)
         line(from[1]+1, fl(1), to[1]+1, tl(1), 12)
-        --line(from[1], fl(0), to[1], tl(0), 14)
-        --line(from[1], from[2] - 0 + drop, to[1], to[2] - 0 + drop, 14)
       elseif age < 6 then
         circfill(from[1]+5, fl(5), flrrnd(2), 8)
-        --circfill(from[1]+4, fl(4), flrrnd(2), 9)
-        --circfill(from[1]+3, fl(3), flrrnd(2), 10)
-        --circfill(from[1]+2, fl(2), flrrnd(2), 11)
         circfill(from[1]+1, fl(1), flrrnd(2), 12)
-        --circfill(from[1], from[2] - 0+drop, flrrnd(2), 14)
       end
 
       if age > 6 then
         del(charge_trail, t)
       end
-
     end
   end
 
