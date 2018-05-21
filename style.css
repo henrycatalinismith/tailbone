@@ -1,3 +1,9 @@
+canvas {
+  image-rendering: pixelated;
+  width: 100vmin;
+  height: 100vmin;
+}
+
 @media (orientation: landscape) {
   body {
     background-color: #000000;
@@ -6,23 +12,12 @@
     justify-content: center;
     margin: 0;
   }
-
-  canvas {
-    background-color: #a25a3e;
-    width: 100vh;
-    height: 100vh;
-  }
 }
 
 @media (orientation: portrait) {
   body {
-    background-color: #a25a3e;
+    background-color: #ab5236;
     margin: 0;
-  }
-
-  canvas {
-    width: 100vw;
-    height: 100vw;
   }
 }
 
