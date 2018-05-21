@@ -646,16 +646,19 @@ function _draw()
   if mode=='play' and alive == true then
     local barw = 64
     local spew = special
-    if spew != lspew and lspew != nil and frame-special_changed<19 then
-      spew = tween(lspew, spew, special_changed, special_changed+20)
+    if spew != lspew and lspew != nil and frame-special_changed<20 then
+      spew = min(
+        64,
+        tween(lspew, spew+1, special_changed, special_changed+20)
+      )
     end
 
     if (spew > 0) then
-      rect(6, 6, 6+barw+4, 16, 13)
+      rect(6, 6, 6+barw+4, 16, 5)
       if show_bonus == true then
         ibc = ({11,12,8,14})[flrrnd(4)+1]
       else
-        ibc = 12
+        ibc = 13
       end
       rect(7, 7, 7+barw+2, 15, ibc)
       if spew > 0 then
@@ -704,6 +707,7 @@ special = 0
 special_changed = 0
 special_animating = false
 has_specialed = false
+specialed_on = 0
 beat_frame = 0
 combo_score = 0
 new_combo_score = 0
@@ -1496,6 +1500,19 @@ function gameover()
     paused = true
     final_score = combo_score
 
+    fireworks_budget = flr(final_score / 1000)
+    afterc(128, function()
+      if alive == false and mode == 'play' then
+        everyc(16, function()
+          while alive == false and mode == 'play' and fireworks_budget > 0 do
+            firework(flrrnd(128))
+            fireworks_budget = fireworks_budget - 1
+            yield()
+          end
+        end)
+      end
+    end)
+
     board.offset = {distance, altitude}
     board.vector = {}
     board.vector[1] = speed - 1
@@ -1525,9 +1542,9 @@ function gameover()
   end
 end
 
-function firework()
+function firework(fx)
   add(fireworks, {
-    cityscape_offset + 100, -- x offset
+    cityscape_offset + (fx or 100), -- x offset
     0, -- y offset
     0, -- angular speed
     2, -- lift
@@ -1542,9 +1559,11 @@ function increase_special(n)
   special = min(64, special + n)
   special_changed = frame
 
-  if special >= 64 then
+  if special >= 64 and frame-specialed_on>60 then
+    sfx(18)
     show_bonus = true
     has_specialed = true
+    specialed_on = frame
     new_combo_score = combo_score+1000
     old_combo_score = combo_score
     afterc(30, hide_bonus)
@@ -1736,7 +1755,9 @@ actions = {
 
   music_play = function()
     music(-1)
-    music(level_music[level])
+    if alive == true then
+      music(level_music[level])
+    end
   end,
 
   start_difficulty_tick = function()
@@ -1855,6 +1876,7 @@ actions = {
     special = 0
     special_changed = 0
     has_specialed = false
+    specialed_on = 0
     combo_length = 0
     new_combo_score = 0
     old_combo_score = 0
