@@ -6,6 +6,7 @@ __lua__
 
 function _init()
   poke(0x5f2d, 1)
+  high_score = peek(0x5f80)
   actions.reset()
 end
 
@@ -674,6 +675,9 @@ function _draw()
       sw = ({20,36,52,60,78,92,112,128})[dead_for]
       sspr(0, 64, sw, 32, 0, 32)
     end
+    if new_record == true then
+      printr("high score!", 8, 8, {loop(32,5),7,1,8})
+    end
     if frame - died > 120 then
       --printr('lol', 64, 64, {7,0})
       string = ''..final_score
@@ -708,7 +712,6 @@ special_changed = 0
 special_animating = false
 has_specialed = false
 specialed_on = 0
-beat_frame = 0
 combo_score = 0
 new_combo_score = 0
 old_combo_score = 0
@@ -724,6 +727,7 @@ distance = 0
 altitude = 0
 speed = 0
 lift = 0
+new_record = false
 
 frame = 0
 beat = 0
@@ -750,10 +754,7 @@ can_charge = true
 min_charge = 2
 max_charge = 64
 overtaking = false
-cue_jump = false
 groundlevel = 0
-above_lava = 0
-above_cable = 0
 push_speed = 1
 slam_start_height = 0
 
@@ -920,74 +921,7 @@ levels = {
 
 }
 
-pool = {
-  -- road -----
-  --'open_road',
-  --'interstate',
-  --
-  -- cactus ---
-  --'lone_cactus',
-  --'double_cactus',
-  --'double_wide',
-  --'double_lighthouse',
-  --'triple_cactus',
-  --'quad_cactus',
-  --
-  -- lava -----
-  --'lava_puddle',
-  --'lava_pool',
-  --'lava_lake',
-  --'lava_ocean',
-  --'lava_deathtrap',
-  --
-  -- cables ---
-  -- 'powerslide',
-  -- 'double_powerslide',
-  -- 'triple_powerslide',
-  --
-  -- volcanos -
-  -- 'volcano_puddle',
-  -- 'volcano_pool',
-  -- 'volcano_lake',
-  -- 'volcano_ocean',
-  -- 'volcano_deathtrap',
-  --
-  -- Â½volcanos -
-  -- 'fs_half_volcano_puddle',
-  -- 'bs_half_volcano_puddle',
-  -- 'fs_half_volcano_pool',
-  -- 'bs_half_volcano_pool',
-  -- 'fs_half_volcano_lake',
-  -- 'bs_half_volcano_lake',
-  -- 'fs_half_volcano_ocean',
-  -- 'bs_half_volcano_ocean',
-  -- 'fs_half_volcano_deathtrap',
-  -- 'bs_half_volcano_deathtrap',
-  --
-  -- special ---
-  -- 'cactus_lava_gap',
-  --
-  -- indoors ---
-  -- 'indoor_lake',
-  -- 'indoor_ocean',
-  --
-  -- indovol --
-  -- 'indoor_volcano_lake',
-  -- 'indoor_volcano_ocean',
-  --
-  -- runways --
-  -- 'lake_runway',
-  -- 'ocean_runway',
-  -- 'deathtrap_runway',
-  --
-  -- volcano runways
-  -- 'volcano_lake_runway',
-  -- 'volcano_ocean_runway',
-  -- 'volcano_deathtrap_runway',
-
-  -- with meteors
-  'volcano_ocean_runway_meteor',
-}
+pool = {}
 
 function layers(length, ...)
   local layers = {}
@@ -1047,47 +981,34 @@ end
 
 spots = {
 
-  -- .... .... .... ....
   open_road = layers(64),
 
-  -- .... .... .... .... .... .... .... ....
   interstate = layers(128),
 
-  -- .... .... .... ...ððµ
   lone_cactus = cactus(64, 64),
 
-  -- .... .... .... ...ððµ ...ððµ
   twin_cactus = cactus(64, 64, 80),
 
-  -- .... .... .... ...ððµ .... ...ððµ
   double_cactus = cactus(64, 64, 96),
 
-  -- .... .... .... ...ððµ .... .... .... ...ððµ
   double_wide = cactus(128, 64, 128),
 
-  -- .... .... .... ...ððµ .... .... .... .... .... ...ððµ
   double_lighthouse = cactus(128, 64, 160),
 
-  -- .... .... .... ...ððµ .... .... .... .... .... .... .... .... .... ...ððµ
   double_clifftop = cactus(128, 64, 224),
 
-  -- .... .... .... ...ððµ .... .... .... .... .... .... .... ...ððµ .... ...ððµ
   triple_cactus = cactus(128, 64, 192, 224),
 
-  -- .... .... .... ...ððµ .... ...ððµ .... .... .... .... .... ...ððµ .... ...ððµ
   quad_cactus = cactus(128, 64, 96, 192, 224),
 
-  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ....
   cactus_woods = cactus(128, 64, 80, 96, 112),
 
-  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ
   cactus_forest = cactus(
     128,
     64, 80, 96, 112,
     128, 144, 160, 176
   ),
 
-  -- .... .... .... ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ ...ððµ
   cactus_jungle = cactus(
     128,
     64, 80, 96, 112,
@@ -1500,7 +1421,14 @@ function gameover()
     paused = true
     final_score = combo_score
 
-    fireworks_budget = flr(final_score / 1000)
+    fireworks_budget = 0
+    if final_score > high_score then
+      fireworks_budget = flr(final_score / 1000)
+      high_score = final_score
+      new_record = true
+      poke(0x5f80, high_score)
+    end
+
     afterc(128, function()
       if alive == false and mode == 'play' then
         everyc(16, function()
@@ -1839,7 +1767,6 @@ actions = {
   next_beat = function()
     while alive do
       beat=beat%4+1
-      beat_frame = frame
       if beat == 1 then
         bar=bar+1
       end
@@ -1874,6 +1801,7 @@ actions = {
   reset = function()
     combo_score = 0
     special = 0
+    new_record = false
     special_changed = 0
     has_specialed = false
     specialed_on = 0
@@ -2410,7 +2338,6 @@ function update_groundlevel()
       p2 = { offset = {x2, y2} }
       buckle = cable_buckle(p1, p2)
       if trick == 'grind' or altitude <= y1 + buckle + 1 then
-        above_cable = true
         groundlevel = y1 + buckle
         return
       end
@@ -2422,14 +2349,11 @@ function update_groundlevel()
     x2 = l[2]
 
     if distance >= x1 and (distance+trex.size[1]) <= x2 then
-      above_lava = true
       groundlevel = 3
       return
     end
   end
-  above_lava = false
 
-  above_cable = false
   groundlevel = 0
 end
 

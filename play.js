@@ -27,8 +27,16 @@ window.addEventListener("load", () => {
 
   const persist = (hex, name) => {
     Object.defineProperty(GpioArray.prototype, hex-0x5f80, {
-      get: () => localStorage.getItem(name),
-      set: v => localStorage.setItem(name, v),
+      get: () => {
+        const value = JSON.parse(localStorage.getItem(name) || null);
+        console.log(`get ${name}:${value}`);
+        return value;
+      },
+
+      set: v => {
+        console.log(`set ${name}:${v}`);
+        localStorage.setItem(name, v);
+      },
     });
   }
 
