@@ -44,7 +44,7 @@ document.addEventListener("deviceready", () => {
   document.body.addEventListener("touchend", up);
 
   const game = document.createElement("script");
-  game.src = "tailbone.js";
+  game.src = "js/tailbone.js";
   document.head.appendChild(game);
 });
 

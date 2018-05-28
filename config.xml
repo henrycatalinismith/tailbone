@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="app.tailbone" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-  <name>Tailbone</name>
+    <name>Tailbone</name>
     <description>
         Endless runner game featuring the gnarliest T-Rex of the KT extinction event. Play as one of the last surviving dinosaurs of the cretaceous period going for one final skate before it all comes to a fiery end.  Try to put down the best combo you can: it'll be 65 million years until the next skate session!
     </description>
@@ -24,4 +24,5 @@
         <allow-intent href="itms-apps:*" />
     </platform>
     <preference name="SplashScreenDelay" value="0" />
+    <engine name="ios" spec="4.5.4" />
 </widget>
