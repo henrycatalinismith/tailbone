@@ -24,5 +24,8 @@
         <allow-intent href="itms-apps:*" />
     </platform>
     <preference name="SplashScreenDelay" value="0" />
+    <preference name="SuppressesLongPressGesture" value="true" />
+    <preference name="Suppresses3DTouchGesture" value="true" />
+    <preference name="DisallowOverscroll" value="true" />
     <engine name="ios" spec="4.5.4" />
 </widget>
