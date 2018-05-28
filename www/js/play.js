@@ -1,4 +1,4 @@
-window.addEventListener("load", () => {
+document.addEventListener("deviceready", () => {
   const canvas = document.querySelector("canvas");
 
   const vh = v => (v * window.innerHeight) / 100;
@@ -28,8 +28,8 @@ window.addEventListener("load", () => {
   // 0x5f80
   Object.defineProperty(GpioArray.prototype, 0, {
     set: v => {
-      document.body.classList.remove('loading');
-      document.body.classList.add('loaded');
+      document.body.classList.remove("loading");
+      document.body.classList.add("loaded");
     },
   });
 
