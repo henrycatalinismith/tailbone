@@ -25,34 +25,23 @@ window.addEventListener("load", () => {
 
   GpioArray.prototype.constructor = GpioArray;
 
-  const persist = (hex, name) => {
-    Object.defineProperty(GpioArray.prototype, hex-0x5f80, {
-      get: () => {
-        const value = JSON.parse(localStorage.getItem(name) || null);
-        console.log(`get ${name}:${value}`);
-        return value;
-      },
-
-      set: v => {
-        console.log(`set ${name}:${v}`);
-        localStorage.setItem(name, v);
-      },
-    });
-  }
-
-  persist(0x5f80, "highScore");
+  // 0x5f80
+  Object.defineProperty(GpioArray.prototype, 0, {
+    set: v => {
+      document.body.classList.remove('loading');
+      document.body.classList.add('loaded');
+    },
+  });
 
   window.Module = { canvas };
   window.pico8_buttons = [0];
   window.pico8_gpio = new GpioArray();
 
-  document.body.addEventListener("touchstart", () => {
-    pico8_buttons[0] = 32;
-  });
+  const up = () => pico8_buttons[0] = 0;
+  const down = () => pico8_buttons[0] = 32;
 
-  document.body.addEventListener("touchend", () => {
-    pico8_buttons[0] = 0;
-  });
+  document.body.addEventListener("touchstart", down);
+  document.body.addEventListener("touchend", up);
 
   const game = document.createElement("script");
   game.src = "tailbone.js";
