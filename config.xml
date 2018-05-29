@@ -27,5 +27,9 @@
     <preference name="SuppressesLongPressGesture" value="true" />
     <preference name="Suppresses3DTouchGesture" value="true" />
     <preference name="DisallowOverscroll" value="true" />
+    <plugin name="cordova-plugin-wkwebview-engine" spec="^1.1.4" />
+    <feature name="CDVWKWebViewEngine">
+        <param name="ios-package" value="CDVWKWebViewEngine" />
+    </feature>
     <engine name="ios" spec="4.5.4" />
 </widget>
