@@ -59,5 +59,8 @@
         <param name="ios-package" value="CDVWKWebViewEngine" />
     </feature>
     <plugin name="cordova-plugin-splashscreen" spec="^5.0.2" />
+    <plugin name="cordova-plugin-statusbar" spec="^2.4.2" />
+    <preference name="StatusBarOverlaysWebView" value="false" />
+    <preference name="StatusBarBackgroundColor" value="#1d2b53" />
     <engine name="ios" spec="4.5.4" />
 </widget>
