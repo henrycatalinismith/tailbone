@@ -48,6 +48,7 @@
         <icon height="196" src="res/icon/ios/icon-196.png" width="196" />
         <icon height="512" src="res/icon/ios/icon-512.png" width="512" />
         <icon height="1024" src="res/icon/ios/icon-1024.png" width="1024" />
+        <splash src="res/screen/ios/Default@2x~universal~anyany.png" />
     </platform>
     <preference name="SplashScreenDelay" value="0" />
     <preference name="SuppressesLongPressGesture" value="true" />
@@ -57,5 +58,6 @@
     <feature name="CDVWKWebViewEngine">
         <param name="ios-package" value="CDVWKWebViewEngine" />
     </feature>
+    <plugin name="cordova-plugin-splashscreen" spec="^5.0.2" />
     <engine name="ios" spec="4.5.4" />
 </widget>
