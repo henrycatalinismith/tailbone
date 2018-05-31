@@ -28,6 +28,7 @@ document.addEventListener("deviceready", () => {
   // 0x5f80
   Object.defineProperty(GpioArray.prototype, 0, {
     set: v => {
+      // Module.pico8ToggleSound();
       document.body.classList.remove("loading");
       document.body.classList.add("loaded");
     },
@@ -39,12 +40,17 @@ document.addEventListener("deviceready", () => {
 
   const up = () => pico8_buttons[0] = 0;
   const down = () => pico8_buttons[0] = 32;
+  const pause = () => Module.pauseMainLoop();
+  const resume = () => Module.resumeMainLoop();
 
   document.body.addEventListener("touchstart", down);
   document.body.addEventListener("touchend", up);
+  document.body.addEventListener("pause", pause);
+  document.body.addEventListener("resume", resume);
 
   const game = document.createElement("script");
   game.src = "js/tailbone.js";
+  // game.onload = () => Module.pico8ToggleSound();
   document.head.appendChild(game);
 });
 
