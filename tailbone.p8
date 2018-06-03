@@ -988,9 +988,9 @@ spots = {
   double_wide = cactus(128, 64, 128),
   double_lighthouse = cactus(128, 64, 160),
   double_clifftop = cactus(128, 64, 224),
-  triple_cactus = cactus(128, 64, 192, 224),
-  quad_cactus = cactus(128, 64, 96, 192, 224),
-  cactus_woods = cactus(128, 64, 80, 96, 112),
+  --triple_cactus = cactus(128, 64, 192, 224),
+  --quad_cactus = cactus(128, 64, 96, 192, 224),
+  --cactus_woods = cactus(128, 64, 80, 96, 112),
 
   cactus_forest = cactus(
     128,
@@ -1627,9 +1627,6 @@ actions = {
   end,
 
   destroy_meteor = function()
-    destroying[3] = 0
-    destroying[4] = 0
-
     if trick == 'slam' then
       lift = max(slam_start_height/14, -4.5)
       extend_combo(5, 'asteroid')
@@ -1657,11 +1654,11 @@ actions = {
       end
     end
 
-    printh(stat(1))
+    --printh(stat(1))
     for i,l in pairs(lava) do
       if l[2] < foreground_offset then
-        printh('gc')
-        printh(l[2])
+        --printh('gc')
+        --printh(l[2])
         del(lava, l)
       end
     end
@@ -1673,7 +1670,9 @@ actions = {
     end
 
     for m in all(meteors) do
-      if m[1] < foreground_offset and m[3] < 0 then
+      left_screen = m[1] < foreground_offset and m[3] < 0
+      destroyed = frame-m[8] > 60
+      if left_screen == true or destroyed == true then
         del(meteors, m)
       end
     end
@@ -1900,7 +1899,7 @@ actions = {
     charge_trail = {}
     slam_trail = {}
 
-    level = 1
+    level = 28
     groundlevel = 0
     alive = true
     trex.trick = 'push'
@@ -1944,7 +1943,7 @@ end
 
 function draw(id, pos)
   if sprites[id] == nil then
-    printh('draw - no such '..id)
+    --printh('draw - no such '..id)
     return
   end
 
