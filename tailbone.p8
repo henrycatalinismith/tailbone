@@ -1670,9 +1670,7 @@ actions = {
     end
 
     for m in all(meteors) do
-      left_screen = m[1] < foreground_offset and m[3] < 0
-      destroyed = frame-m[8] > 60
-      if left_screen == true or destroyed == true then
+      if (m[1] < foreground_offset and m[3] < 0) or (frame-m[8] > 60) then
         del(meteors, m)
       end
     end
@@ -1899,7 +1897,7 @@ actions = {
     charge_trail = {}
     slam_trail = {}
 
-    level = 28
+    level = 1
     groundlevel = 0
     alive = true
     trex.trick = 'push'
