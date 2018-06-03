@@ -1,4 +1,5 @@
 document.addEventListener("deviceready", () => {
+//document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.querySelector("canvas");
 
   const vh = v => (v * window.innerHeight) / 100;
@@ -28,7 +29,7 @@ document.addEventListener("deviceready", () => {
   // 0x5f80
   Object.defineProperty(GpioArray.prototype, 0, {
     set: v => {
-      // Module.pico8ToggleSound();
+      canvas.style.opacity = 1;
       document.body.classList.remove("loading");
       document.body.classList.add("loaded");
     },
@@ -50,7 +51,21 @@ document.addEventListener("deviceready", () => {
 
   const game = document.createElement("script");
   game.src = "js/tailbone.js";
-  // game.onload = () => Module.pico8ToggleSound();
+  game.onload = () => {
+    setTimeout(() => {
+      const segments = document.querySelectorAll(".LoadingScreen__segment");
+      let count = 0;
+      const interval = setInterval(() => {
+        if (count > 7) {
+          clearInterval(interval);
+          return;
+        }
+
+        segments[count].style.opacity = 1;
+        count++;
+      }, 20);
+    }, 2000);
+  }
   document.head.appendChild(game);
 });
 
