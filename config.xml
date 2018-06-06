@@ -63,4 +63,5 @@
     <preference name="StatusBarOverlaysWebView" value="false" />
     <preference name="StatusBarBackgroundColor" value="#1d2b53" />
     <engine name="ios" spec="4.5.4" />
+    <engine name="android" spec="^7.0.0" />
 </widget>
