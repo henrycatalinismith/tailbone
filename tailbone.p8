@@ -623,7 +623,7 @@ function _draw()
   end
 
   if show_bonus == true then
-    center('+50', 32, {loop(32,5),7,1,8})
+    center('+100', 32, {loop(32,5),7,1,8})
   end
 
   score_x = 120 - (#(''..n)) * 4
@@ -1557,7 +1557,7 @@ function increase_special(n)
     show_bonus = true
     has_specialed = true
     specialed_on = frame
-    new_combo_score = combo_score+50
+    new_combo_score = combo_score+100
     old_combo_score = combo_score
 
     afterc(30, function()
