@@ -9,6 +9,10 @@ canvas {
   opacity: 0;
 }
 
+body.loading canvas {
+  display: none;
+}
+
 @media (orientation: landscape) {
   body {
     background-color: #000000;
