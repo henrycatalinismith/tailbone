@@ -65,8 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.addEventListener("pause", pause);
   document.body.addEventListener("resume", resume);
 
+  const filename = !!window.location.href.match(/2$/)
+    ? "js/tailbone2.js"
+    : "js/tailbone.js";
+
   const game = document.createElement("script");
-  game.src = "js/tailbone.js";
+  game.src = filename;
   game.onload = () => {
     setTimeout(() => {
       const segments = document.querySelectorAll(".LoadingScreen__segment");
