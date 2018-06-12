@@ -30,8 +30,17 @@ www/js/disk1.js: www/js
 www/js/disk2.js: www/js
 	cp carts/disk2.js www/js/disk2.js
 
+www/js/cart.js: www/js
+	cp scripts/cart.js www/js/cart.js
+
+www/js/input.js: www/js
+	cp scripts/input.js www/js/input.js
+
 www/js/pico8.js: www/js
 	cp scripts/pico8.js www/js/pico8.js
+
+www/js/scene.js: www/js
+	cp scripts/scene.js www/js/scene.js
 
 www/js/tailbone.js: www/js
 	cp launchers/web.js www/js/tailbone.js
@@ -41,9 +50,12 @@ www: \
 	www/css/index.css \
 	www/img/icon-512.png \
 	www/img/loading.png \
+	www/js/cart.js \
 	www/js/disk1.js \
 	www/js/disk2.js \
+	www/js/input.js \
 	www/js/pico8.js \
+	www/js/scene.js \
 	www/js/tailbone.js
 
 res/icon/ios/icon-%.png:
