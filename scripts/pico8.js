@@ -1,5 +1,4 @@
 window.pico8 = (canvas => {
-console.log(canvas);
   const _pico8 = {};
 
   const GpioArray = function () {
@@ -29,6 +28,4 @@ console.log(canvas);
 
   return _pico8;
 })(document.querySelector("canvas"));
-
-console.log(window.pico8);
 

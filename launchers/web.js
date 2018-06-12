@@ -14,30 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas.width = vmin(100);
   canvas.height = vmin(100);
 
-  const GpioArray = function () {
-    Array.call(this, 128);
-  }
-
-  GpioArray.prototype = Object.create(Array.prototype, {
-    length: {
-      value: 128,
-      writable: false,
-    }
-  });
-
-  GpioArray.prototype.constructor = GpioArray;
-
-  // 0x5f80
   pico8.gpio(0x5f80, {
     set: v => {
       scene.classList.remove("Scene--loading");
       scene.classList.add("Scene--canvas");
     },
   });
-
-  //window.Module = { canvas };
-  //window.pico8_buttons = [0];
-  //window.pico8_gpio = new GpioArray();
 
   const up = () => pico8_buttons[0] = 0;
   const down = () => pico8_buttons[0] = 32;
