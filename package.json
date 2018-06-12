@@ -6,7 +6,7 @@
     "main": "index.js",
     "scripts": {
         "prestart": "http-server www &",
-        "start": "watch 'make clean www' carts images indexes stylesheets --interval=4 --wait=2",
+        "start": "watch 'make clean www' carts images indexes scripts stylesheets --interval=4 --wait=2",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Apache Cordova Team",

@@ -1,5 +1,6 @@
 //document.addEventListener("deviceready", () => {
 document.addEventListener("DOMContentLoaded", () => {
+  const scene = document.querySelector(".Scene");
   const canvas = document.querySelector("canvas");
 
   const vh = v => (v * window.innerHeight) / 100;
@@ -27,17 +28,16 @@ document.addEventListener("DOMContentLoaded", () => {
   GpioArray.prototype.constructor = GpioArray;
 
   // 0x5f80
-  Object.defineProperty(GpioArray.prototype, 0, {
+  pico8.gpio(0x5f80, {
     set: v => {
-      canvas.style.opacity = 1;
-      document.body.classList.remove("loading");
-      document.body.classList.add("loaded");
+      scene.classList.remove("Scene--loading");
+      scene.classList.add("Scene--canvas");
     },
   });
 
-  window.Module = { canvas };
-  window.pico8_buttons = [0];
-  window.pico8_gpio = new GpioArray();
+  //window.Module = { canvas };
+  //window.pico8_buttons = [0];
+  //window.pico8_gpio = new GpioArray();
 
   const up = () => pico8_buttons[0] = 0;
   const down = () => pico8_buttons[0] = 32;

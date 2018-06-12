@@ -28,6 +28,9 @@ www/js/disk1.js: www/js
 www/js/disk2.js: www/js
 	cp carts/disk2.js www/js/disk2.js
 
+www/js/pico8.js: www/js
+	cp scripts/pico8.js www/js/pico8.js
+
 www/js/tailbone.js: www/js
 	cp launchers/web.js www/js/tailbone.js
 
@@ -38,6 +41,7 @@ www: \
 	www/img/loading.png \
 	www/js/disk1.js \
 	www/js/disk2.js \
+	www/js/pico8.js \
 	www/js/tailbone.js
 
 res/icon/ios/icon-%.png:

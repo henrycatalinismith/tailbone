@@ -78,31 +78,42 @@
     />
 
     <!--<script type="text/javascript" src="cordova.js"></script>-->
-    <script type="text/javascript" src="js/tailbone.js"></script>
-
     <title>Tailbone</title>
 
   </head>
-  <body class="loading">
+  <body>
 
-    <div class="LoadingScreen">
-      <div class="LoadingScreen__square">
-        <img class="LoadingScreen__text" src="img/loading.png" alt="loading" />
-        <div class="LoadingScreen__bar">
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
-          <div class="LoadingScreen__segment"></div>
+    <div class="Scene Scene--loading">
+      <div class="Scene__menu">
+        menu
+      </div>
+
+      <div class="Scene__loading">
+        <div class="LoadingScreen">
+          <div class="LoadingScreen__square">
+            <img class="LoadingScreen__text" src="img/loading.png" alt="loading" />
+            <div class="LoadingScreen__bar">
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+              <div class="LoadingScreen__segment"></div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="Scene__canvas">
+        <canvas>
+        </canvas>
       </div>
     </div>
 
-    <canvas>
-    </canvas>
+    <script type="text/javascript" src="js/pico8.js"></script>
+    <script type="text/javascript" src="js/tailbone.js"></script>
 
   </body>
 </html>

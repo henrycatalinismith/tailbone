@@ -9,10 +9,6 @@ canvas {
   opacity: 0;
 }
 
-body.loading canvas {
-  display: none;
-}
-
 @media (orientation: landscape) {
   body {
     background-color: #000000;
@@ -110,4 +106,47 @@ body.loading canvas {
 
 body.loaded .LoadingScreen {
   display: none;
+}
+
+.Scene {
+  width: 100vw;
+  height: 100vh;
+}
+
+.Scene__menu,
+.Scene__loading,
+.Scene__canvas {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+.Scene--menu .Scene__menu,
+.Scene--loading .Scene__loading,
+.Scene--canvas .Scene__canvas {
+  display: flex;
+}
+
+.Scene--canvas .Scene__canvas {
+  display: flex;
+}
+
+@media (orientation: landscape) {
+  .Scene--canvas .Scene__canvas {
+    background-color: #000000;
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+@media (orientation: portrait) {
+  .Scene--canvas .Scene__canvas {
+    background-color: #ab5236;
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+.Scene--canvas canvas {
+  opacity: 1;
 }
