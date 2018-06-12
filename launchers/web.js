@@ -66,8 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.addEventListener("resume", resume);
 
   const filename = !!window.location.href.match(/2$/)
-    ? "js/tailbone2.js"
-    : "js/tailbone.js";
+    ? "js/disk2.js"
+    : "js/disk1.js";
 
   const game = document.createElement("script");
   game.src = filename;

@@ -3,3 +3,8 @@ node_modules
 platforms
 plugins
 !platforms/ios/Tailbone/Tailbone-Info.plist
+carts/*.html
+www/*.html
+www/css/*.css
+www/img/*.png
+www/js/*.js

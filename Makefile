@@ -1,3 +1,45 @@
+clean:
+	rm -rf www/css
+	rm -rf www/img
+	rm -rf www/js
+	rm -f www/index.html
+
+www/css:
+	mkdir www/css
+
+www/img:
+	mkdir www/img
+
+www/js:
+	mkdir www/js
+
+www/index.html:
+	cp indexes/web.html www/index.html
+
+www/css/index.css: www/css
+	cp stylesheets/index.css www/css/index.css
+
+www/img/%.png: www/img
+	cp images/$*.png www/img/$*.png
+
+www/js/disk1.js: www/js
+	cp carts/disk1.js www/js/disk1.js
+
+www/js/disk2.js: www/js
+	cp carts/disk2.js www/js/disk2.js
+
+www/js/tailbone.js: www/js
+	cp launchers/web.js www/js/tailbone.js
+
+www: \
+	www/index.html \
+	www/css/index.css \
+	www/img/icon-512.png \
+	www/img/loading.png \
+	www/js/disk1.js \
+	www/js/disk2.js \
+	www/js/tailbone.js
+
 res/icon/ios/icon-%.png:
 	convert res/icon/ios/icon-1024.png -resize $*x$* res/icon/ios/icon-$*.png
 
@@ -29,3 +71,4 @@ icons: \
 	res/icon/ios/icon-512.png
 
 
+.PHONY: clean www
