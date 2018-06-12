@@ -1,3 +1,5 @@
+TIMESTAMP=$(shell date -u +"%Y%m%d%H%M%S")
+
 clean:
 	rm -rf www/css
 	rm -rf www/img
@@ -14,7 +16,7 @@ www/js:
 	@mkdir -p www/js
 
 www/index.html:
-	cp indexes/web.html www/index.html
+	sed "s/timestamp/$(TIMESTAMP)/g" indexes/web.html > www/index.html
 
 www/css/index.css: www/css
 	cp stylesheets/index.css www/css/index.css
