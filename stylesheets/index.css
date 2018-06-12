@@ -75,10 +75,6 @@ body {
   background-color: #FFCCAA;
 }
 
-body.loaded .LoadingScreen {
-  display: none;
-}
-
 .Scene {
   width: 100vw;
   height: 100vh;
