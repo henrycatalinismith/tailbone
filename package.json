@@ -5,6 +5,7 @@
     "description": "A sample Apache Cordova application that responds to the deviceready event.",
     "main": "index.js",
     "scripts": {
+        "start": "watch 'make clean www' carts images indexes stylesheets --interval=4 --wait=2",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Apache Cordova Team",
@@ -28,5 +29,8 @@
             "ios",
             "android"
         ]
+    },
+    "devDependencies": {
+        "watch": "^1.0.2"
     }
 }

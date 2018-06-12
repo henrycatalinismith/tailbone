@@ -5,13 +5,13 @@ clean:
 	rm -f www/index.html
 
 www/css:
-	mkdir www/css
+	@mkdir -p www/css
 
 www/img:
-	mkdir www/img
+	@mkdir -p www/img
 
 www/js:
-	mkdir www/js
+	@mkdir -p www/js
 
 www/index.html:
 	cp indexes/web.html www/index.html
