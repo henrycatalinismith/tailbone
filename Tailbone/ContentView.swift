@@ -1,21 +1,45 @@
-//
-//  ContentView.swift
-//  Tailbone
-//
-//  Created by Henry Catalini Smith on 2020-11-03.
-//
-
 import SwiftUI
+import WebKit
 
 struct ContentView: View {
+    let url = Bundle.main.url(
+        forResource: "tailbone",
+        withExtension: "html"
+    )
     var body: some View {
-        Text("Hello, world!")
-            .padding()
+        Webview(url: url!)
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+    }
+}
+
+struct Webview: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(
+        context: UIViewRepresentableContext<Webview>
+    ) -> WKWebView {
+        let webview = WKWebView()
+        let request = URLRequest(
+            url: self.url,
+            cachePolicy: .returnCacheDataElseLoad
+        )
+        webview.load(request)
+        return webview
+    }
+
+    func updateUIView(
+        _ webview: WKWebView,
+        context: UIViewRepresentableContext<Webview>
+    ) {
+        let request = URLRequest(
+            url: self.url,
+            cachePolicy: .returnCacheDataElseLoad
+        )
+        webview.load(request)
     }
 }
