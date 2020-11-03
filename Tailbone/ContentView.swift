@@ -3,7 +3,7 @@ import WebKit
 
 struct ContentView: View {
     let url = Bundle.main.url(
-        forResource: "tailbone",
+        forResource: "index",
         withExtension: "html"
     )
     var body: some View {
