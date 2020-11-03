@@ -14,6 +14,7 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .preferredColorScheme(.dark)
     }
 }
 
@@ -23,7 +24,12 @@ struct Webview: UIViewRepresentable {
     func makeUIView(
         context: UIViewRepresentableContext<Webview>
     ) -> WKWebView {
-        let webview = WKWebView()
+        let config = WKWebViewConfiguration()
+        config.mediaTypesRequiringUserActionForPlayback = []
+        let webview = WKWebView(
+            frame: .zero,
+            configuration: config
+        )
         let request = URLRequest(
             url: self.url,
             cachePolicy: .returnCacheDataElseLoad
