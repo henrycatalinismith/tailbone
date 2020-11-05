@@ -34,20 +34,29 @@ struct Webview: UIViewRepresentable {
     func makeUIView(
         context: UIViewRepresentableContext<Webview>
     ) -> WKWebView {
+        let config = WKWebViewConfiguration()
+
+        // enable audio playback to begin immediately
+        config.mediaTypesRequiringUserActionForPlayback = []
+
+        // ensure window.webkit.messageHandlers is present for index.html to
+        // detect the platform correctly and skip the web-only menu screen
         let contentController = WKUserContentController()
         contentController.add(
             ViewController.init(),
             name: "placeholder"
         )
-
-        let config = WKWebViewConfiguration()
-        config.mediaTypesRequiringUserActionForPlayback = []
         config.userContentController = contentController
 
         let webview = WKWebView(
             frame: .zero,
             configuration: config
         )
+
+        // prevent white flash during load
+        webview.isOpaque = false
+        webview.backgroundColor = UIColor.clear
+
         let request = URLRequest(
             url: self.url,
             cachePolicy: .returnCacheDataElseLoad
