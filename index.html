@@ -48,6 +48,7 @@
     <style type="text/css">
       :root {
         --bg: #162552;
+        --buttonAnimation: progress;
         --buttonDisplay: none;
         --canvasDisplay: none;
         --canvasOpacity: 0;
@@ -75,6 +76,10 @@
         --justify: flex-start;
       }
 
+      body[data-platform="ios"] {
+        --buttonAnimation: none;
+      }
+
       @media (orientation: landscape) {
         body[data-mode="play"] {
           --bg: black;
@@ -84,13 +89,11 @@
       html {
         box-sizing: border-box;
         overflow: hidden;
-        -webkit-touch-callout: none;
-        -webkit-text-size-adjust: none;
-        -webkit-user-select: none
       }
 
       *, *:before, *:after {
         box-sizing: inherit;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
       }
 
       body {
@@ -104,6 +107,9 @@
         margin: 0;
         row-gap: clamp(4vmin, 8rem, 8vmin);
         width: 100vw;
+        -webkit-touch-callout: none;
+        -webkit-text-size-adjust: none;
+        -webkit-user-select: none
       }
 
       img[alt="tailbone"] {
@@ -175,11 +181,11 @@
         height: 48px;
         justify-content: space-around;
         width: 256px;
-        background-color: #29adff;
+        background-color: transparent;
         border: 2px solid #1d2b53;
         box-shadow: 0 0 4px #c2c3c7;
         border-radius: 4px;
-        animation-name: progress;
+        animation-name: var(--buttonAnimation);
         animation-duration: 256ms;
         animation-iteration-count: 1;
         animation-fill-mode: forwards;
@@ -257,7 +263,7 @@
 
     <title>Tailbone</title>
   </head>
-  <body>
+  <body data-platform="web">
 
     <img
       alt="tailbone"
@@ -357,6 +363,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         if (window.webkit && window.webkit.messageHandlers) {
           document.body.dataset.mode = "load"
+          document.body.dataset.platform = "ios"
           run()
         } else {
           document.body.dataset.mode = "menu"
