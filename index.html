@@ -342,7 +342,9 @@
       const down = () => pico8_buttons[0] = 32
       const up = (event) => {
         pico8_buttons[0] = 0
-        event.preventDefault()
+        if (event.target === document.body) {
+          event.preventDefault()
+        }
       }
 
       document.body.addEventListener("touchstart", down)
