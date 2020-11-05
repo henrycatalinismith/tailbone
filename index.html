@@ -83,6 +83,10 @@
 
       html {
         box-sizing: border-box;
+        overflow: hidden;
+        -webkit-touch-callout: none;
+        -webkit-text-size-adjust: none;
+        -webkit-user-select: none
       }
 
       *, *:before, *:after {
@@ -90,14 +94,15 @@
       }
 
       body {
-        align-items: center;
+        align-content: var(--justify);
         background-color: var(--bg);
-        display: flex;
+        display: grid;
         flex-direction: column;
-        justify-content: var(--justify);
+        grid-auto-rows: min-content;
+        justify-items: center;
         height: 100vh;
         margin: 0;
-        row-gap: 2vmin;
+        row-gap: clamp(4vmin, 8rem, 8vmin);
         width: 100vw;
       }
 
@@ -149,6 +154,18 @@
         stroke-linejoin: round;
       }
 
+      @keyframes progress {
+        from {
+          background-color: #29adff;
+          width: 108px;
+        }
+
+        to {
+          background-color: transparent;
+          width: 256px;
+        }
+      }
+
       .progress {
         align-items: center;
         border: 8px solid slategray;
@@ -158,10 +175,18 @@
         height: 48px;
         justify-content: space-around;
         width: 256px;
+        background-color: #29adff;
+        border: 2px solid #1d2b53;
+        box-shadow: 0 0 4px #c2c3c7;
+        border-radius: 4px;
+        animation-name: progress;
+        animation-duration: 256ms;
+        animation-iteration-count: 1;
+        animation-fill-mode: forwards;
       }
 
       .segment {
-        --d: 2000ms;
+        --d: 1800ms;
         --t: 30ms;
         --n: 0;
         animation-name: segment;
