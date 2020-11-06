@@ -89,9 +89,6 @@
       html {
         box-sizing: border-box;
         overflow: hidden;
-        -webkit-touch-callout: none;
-        -webkit-text-size-adjust: none;
-        -webkit-user-select: none;
       }
 
       *, *:before, *:after {
@@ -108,9 +105,12 @@
         justify-items: center;
         height: 100vh;
         margin: 0;
+        position: relative;
         row-gap: clamp(4vmin, 8rem, 8vmin);
+        user-select: none;
         width: 100vw;
         -webkit-user-select: none;
+        z-index: 1;
       }
 
       img[alt="tailbone"] {
@@ -252,12 +252,25 @@
         background-color: #FFCCAA;
       }
 
-      canvas {
+      canvas:nth-of-type(1) {
         display: var(--canvasDisplay);
         image-rendering: pixelated;
         opacity: var(--canvasOpacity);
         width: 100vmin;
         height: 100vmin;
+      }
+
+      canvas:nth-of-type(2) {
+        background: transparent;
+        display: var(--canvasDisplay);
+        image-rendering: pixelated;
+        opacity: var(--canvasOpacity);
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        height: 100%;
       }
 
     </style>
@@ -314,6 +327,9 @@
     <canvas>
     </canvas>
 
+    <canvas>
+    </canvas>
+
     <script type="text/javascript">
 
       function GpioArray() {
@@ -334,14 +350,25 @@
       })
 
       const button = document.querySelector("button")
-      const canvas = document.querySelector("canvas")
+      const canvas = document.querySelector("canvas:nth-of-type(1)")
+      const filler = document.querySelector("canvas:nth-of-type(2)")
+
+      filler.addEventListener("touchstart", event => {
+        event.preventDefault()
+      })
 
       window.Module = { canvas }
       window.pico8_buttons = [0]
       window.pico8_gpio = new GpioArray()
 
-      const down = () => pico8_buttons[0] = 32
-      const up = () => pico8_buttons[0] = 0
+      const down = (event) => {
+        event.preventDefault()
+        pico8_buttons[0] = 32
+      }
+
+      const up = (event) => {
+        pico8_buttons[0] = 0
+      }
 
       document.body.addEventListener("touchstart", down)
       document.body.addEventListener("touchend", up)
@@ -351,13 +378,13 @@
 
       document.body.addEventListener("keydown", event => {
         if (event.keyCode === 32) {
-          down()
+          down(event)
         }
       })
 
       document.body.addEventListener("keyup", event => {
         if (event.keyCode === 32) {
-          up()
+          up(event)
         }
       })
 

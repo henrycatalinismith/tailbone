@@ -28,12 +28,8 @@ class ViewController: UIViewController, WKScriptMessageHandler {
     }
 }
 
-final class Webview: UIViewRepresentable {
-    var url: URL
-
-    init(url: URL) {
-      self.url = url
-    }
+struct Webview: UIViewRepresentable {
+    let url: URL
 
     func makeUIView(
         context: UIViewRepresentableContext<Webview>
@@ -61,13 +57,6 @@ final class Webview: UIViewRepresentable {
         webview.isOpaque = false
         webview.backgroundColor = UIColor.clear
 
-        // prevent haptic feedback during long presses
-        let recognizer = UILongPressGestureRecognizer(
-            target: self, action:
-            #selector(longPress)
-        )
-        webview.addGestureRecognizer(recognizer)
-
         let request = URLRequest(
             url: self.url,
             cachePolicy: .returnCacheDataElseLoad
@@ -85,12 +74,6 @@ final class Webview: UIViewRepresentable {
             cachePolicy: .returnCacheDataElseLoad
         )
         webview.load(request)
-    }
-
-    @objc func longPress() {
-        // Do nothing. This is only here to suppress long
-        // press gestures and avoid the haptic feedback when
-        // the player is holding down a tap to float longer.
     }
 }
 
