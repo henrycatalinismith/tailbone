@@ -2,12 +2,12 @@ import SwiftUI
 import WebKit
 
 struct ContentView: View {
-    let url = Bundle.main.url(
+    var webview = Webview.init(url: Bundle.main.url(
         forResource: "index",
         withExtension: "html"
-    )
+    )!)
     var body: some View {
-        Webview(url: url!)
+        webview
     }
 }
 
@@ -28,8 +28,12 @@ class ViewController: UIViewController, WKScriptMessageHandler {
     }
 }
 
-struct Webview: UIViewRepresentable {
-    let url: URL
+final class Webview: UIViewRepresentable {
+    var url: URL
+
+    init(url: URL) {
+      self.url = url
+    }
 
     func makeUIView(
         context: UIViewRepresentableContext<Webview>
@@ -57,6 +61,13 @@ struct Webview: UIViewRepresentable {
         webview.isOpaque = false
         webview.backgroundColor = UIColor.clear
 
+        // prevent haptic feedback during long presses
+        let recognizer = UILongPressGestureRecognizer(
+            target: self, action:
+            #selector(longPress)
+        )
+        webview.addGestureRecognizer(recognizer)
+
         let request = URLRequest(
             url: self.url,
             cachePolicy: .returnCacheDataElseLoad
@@ -74,6 +85,12 @@ struct Webview: UIViewRepresentable {
             cachePolicy: .returnCacheDataElseLoad
         )
         webview.load(request)
+    }
+
+    @objc func longPress() {
+        // Do nothing. This is only here to suppress long
+        // press gestures and avoid the haptic feedback when
+        // the player is holding down a tap to float longer.
     }
 }
 
