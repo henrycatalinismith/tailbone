@@ -7,14 +7,10 @@ struct ContentView: View {
         withExtension: "html"
     )!)
     var body: some View {
-        webview
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-            .preferredColorScheme(.dark)
+        ZStack {
+            Color.black.edgesIgnoringSafeArea(.all)
+            webview
+        }
     }
 }
 
