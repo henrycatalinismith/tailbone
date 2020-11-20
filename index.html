@@ -531,12 +531,6 @@
 
     <script type="text/javascript">
 
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("https://hen.cat/tailbone/sw.js", {
-          scope: "/tailbone",
-        })
-      }
-
       function GpioArray() {
         Array.call(this, 128)
       }
@@ -558,9 +552,15 @@
       const canvas = document.querySelector("canvas:nth-of-type(1)")
       const filler = document.querySelector("canvas:nth-of-type(2)")
 
-      filler.addEventListener("touchstart", event => {
-        event.preventDefault()
-      })
+      const passive = {
+        passive: true,
+      }
+
+      filler.addEventListener(
+        "touchstart",
+        event => event.preventDefault(),
+        passive,
+      )
 
       window.Module = { canvas }
       window.pico8_buttons = [0]
@@ -575,11 +575,29 @@
         pico8_buttons[0] = 0
       }
 
-      document.body.addEventListener("touchstart", down)
-      document.body.addEventListener("touchend", up)
+      document.body.addEventListener(
+        "touchstart",
+        down,
+        passive,
+      )
 
-      document.body.addEventListener("mousedown", down)
-      document.body.addEventListener("mouseup", up)
+      document.body.addEventListener(
+        "touchend",
+        up,
+        passive,
+      )
+
+      document.body.addEventListener(
+        "mousedown",
+        down,
+        passive,
+      )
+
+      document.body.addEventListener(
+        "mouseup",
+        up,
+        passive,
+      )
 
       document.body.addEventListener("keydown", event => {
         if (event.keyCode === 32) {
@@ -599,6 +617,13 @@
           document.body.dataset.platform = "ios"
           run()
         } else {
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register(
+              "https://hen.cat/tailbone/sw.js",
+              { scope: "/tailbone" },
+            )
+          }
+
           document.body.dataset.mode = "menu"
         }
       })
