@@ -30,6 +30,11 @@
     "sizes": "192x192",
     "type": "image/png"
   }, {
+    "src": "images/maskable-274x274.png",
+    "sizes": "274x274",
+    "type": "image/png",
+    "purpose": "any maskable"
+  }, {
     "src": "images/icon-1024x1024.png",
     "sizes": "1024x1024",
     "type": "image/png"
