@@ -87,7 +87,7 @@
     />
 
     <meta
-      name="theme_color"
+      name="theme-color"
       content="#162553"
     />
 
@@ -532,7 +532,9 @@
     <script type="text/javascript">
 
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("https://hen.cat/tailbone/sw.js")
+        navigator.serviceWorker.register("https://hen.cat/tailbone/sw.js", {
+          scope: "/tailbone",
+        })
       }
 
       function GpioArray() {
