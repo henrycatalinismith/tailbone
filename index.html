@@ -7,6 +7,11 @@
     />
 
     <meta
+      name="apple-mobile-web-app-capable"
+      content="yes"
+    />
+
+    <meta
       name="apple-itunes-app"
       content="app-id=1391852488"
     />
@@ -23,7 +28,7 @@
 
     <meta
       property="og:image"
-      content="https://hen.cat/tailbone/opengraph.png"
+      content="https://hen.cat/tailbone/images/opengraph.png"
     />
 
     <meta
@@ -91,6 +96,7 @@
         --iconDisplay: none;
         --justify: center;
         --progressDisplay: none;
+        --creatorBottom: 0;
         --creatorDisplay: none;
         --creatorOpacity: 1;
       }
@@ -99,7 +105,6 @@
         --bg: #162552;
         --buttonDisplay: flex;
         --iconDisplay: flex;
-        --creatorDisplay: grid;
         --creatorOpacity: 1;
       }
 
@@ -107,7 +112,6 @@
         --bg: #162552;
         --iconDisplay: flex;
         --progressDisplay: flex;
-        --creatorDisplay: grid;
         --creatorOpacity: 0;
       }
 
@@ -120,6 +124,19 @@
 
       body[data-platform="ios"] {
         --buttonAnimation: none;
+      }
+
+      @media (min-height: 16rem) {
+        body[data-mode="menu"],
+        body[data-mode="load"] {
+          --creatorDisplay: grid;
+        }
+      }
+
+      @media (min-height: 32rem) {
+        :root {
+          --creatorBottom: 1rem;
+        }
       }
 
       @media (orientation: landscape) {
@@ -204,6 +221,7 @@
       }
 
       [itemprop="creator"] {
+        bottom: var(--creatorBottom);
         display: var(--creatorDisplay);
         opacity: var(--creatorOpacity);
 
@@ -211,8 +229,8 @@
         color: white;
         font-family: Futura, Helvetica, sans-serif;
         grid-template-columns: repeat(2, auto);
+        margin: 0;
         position: absolute;
-        bottom: 1rem;
         transition: opacity 256ms 512ms;
       }
 
@@ -238,6 +256,10 @@
           1px 1px 0px black,
           0px -1px 0px black,
           0px 1px 0px black;
+      }
+
+      [itemprop="creator"] [itemprop="name"]:hover {
+        text-decoration: underline cyan;
       }
 
       [itemprop="headline name"],
