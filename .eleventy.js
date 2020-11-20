@@ -3,6 +3,7 @@ const fs = require("fs")
 
 module.exports = function(eleventyConfig) {
   eleventyConfig.addPassthroughCopy("images")
+  eleventyConfig.addPassthroughCopy("manifest.webmanifest")
 
   eleventyConfig.addPlugin(pwa, {
     swDest: "./_site/sw.js",
