@@ -5,6 +5,7 @@ module.exports = function(eleventyConfig) {
   eleventyConfig.addPassthroughCopy("_headers")
   eleventyConfig.addPassthroughCopy("images")
   eleventyConfig.addPassthroughCopy("manifest.webmanifest")
+  eleventyConfig.addPassthroughCopy("videos")
 
   eleventyConfig.addPlugin(pwa, {
     swDest: "./_site/sw.js",
