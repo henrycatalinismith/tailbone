@@ -3,13 +3,37 @@ tailbone
 
 Skateboarding dinosaur game inspired by the Chrome offline page.
 
-| | |
-|-|-|
-| 🎮  | [play the web version](https://hen.cat/tailbone) |
-| 🎮  | [play the iOS app](https://apps.apple.com/us/app/tailbone/id1391852488) |
-| 🎮. | [play it on the Lexaloffle BBS](https://www.lexaloffle.com/bbs/?tid=39335) |
-
-![Video of gameplay showing the dinosaur repeatedly jumping on cactuses and destroying them while dodging lava pits and meteors](https://hen.cat/tailbone/videos/demo-128x128.gif)
+<table>
+  <tbody>
+    <tr>
+      <td rowspan="3">
+        <img
+          alt="Video of gameplay showing the dinosaur repeatedly jumping on cactuses and destroying them while dodging lava pits and meteors"
+          src="https://hen.cat/tailbone/videos/demo-128x128.gif"
+        />
+      </td>
+      <td>
+        <a href="https://hen.cat/tailbone">
+          🎮 &nbsp;play the web version
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <a href="https://apps.apple.com/us/app/tailbone/id1391852488">
+          🎮 &nbsp;play the iOS app
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <a href="https://www.lexaloffle.com/bbs/?tid=39335">
+          🎮 &nbsp;play it on the Lexaloffle BBS
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 Controls
 --------
