@@ -7,7 +7,7 @@
     "start": "eleventy --serve"
   },
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "@11ty/eleventy": "^0.11.1",
     "eleventy-plugin-pwa": "^1.0.8"
   }

@@ -1,0 +1,25 @@
+on:
+  push:
+    branches:
+      - trunk
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - run: yarn --pure=lockfile
+      - run: yarn build
+
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          exclude_assets: ".github,.gitignore,.npmrc,Assets.xcassets,Info.plist,Launch Screen.storyboard,Preview Assets.xcassets,Tailbone.xcodeproj,TailboneApp.swift,_headers,images,manifest.webmanifest,media,netlify.toml,node_modules,package.json,readme.md,yarn.lock"
+          force_orphan: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: www
+          publish_dir: ./_site
