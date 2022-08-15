@@ -3,7 +3,7 @@ const fs = require("fs")
 
 module.exports = function(eleventyConfig) {
   eleventyConfig.addPassthroughCopy("_headers")
-  eleventyConfig.addPassthroughCopy("images")
+  eleventyConfig.addPassthroughCopy("images/*.png")
   eleventyConfig.addPassthroughCopy("manifest.webmanifest")
   eleventyConfig.addPassthroughCopy("videos")
 
