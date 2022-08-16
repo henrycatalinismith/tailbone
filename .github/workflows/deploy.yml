@@ -19,7 +19,7 @@ jobs:
 
       - uses: peaceiris/actions-gh-pages@v3
         with:
-          exclude_assets: ".github,.gitignore,.npmrc,Assets.xcassets,Info.plist,Launch Screen.storyboard,Preview Assets.xcassets,Tailbone.xcodeproj,TailboneApp.swift,_headers,images,manifest.webmanifest,media,netlify.toml,node_modules,package.json,readme.md,yarn.lock"
+          exclude_assets: ".github,.gitignore,.npmrc,Assets.xcassets,Info.plist,Launch Screen.storyboard,Preview Assets.xcassets,Tailbone.xcodeproj,TailboneApp.swift,_headers,manifest.webmanifest,media,netlify.toml,node_modules,package.json,readme.md,yarn.lock"
           force_orphan: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: www
