@@ -2,7 +2,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - trunk
+      - main
 
 jobs:
   publish:
