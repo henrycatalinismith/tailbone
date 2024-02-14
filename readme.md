@@ -70,4 +70,3 @@ License
 Please copy as much of this as you need if you find something here that helps
 you ship your game. No need to worry about licensing or attribution or any of
 that!
-
