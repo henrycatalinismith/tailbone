@@ -20,13 +20,6 @@ Skateboarding dinosaur game inspired by the Chrome offline page.
     </tr>
     <tr>
       <td>
-        <a href="https://apps.apple.com/us/app/tailbone/id1391852488">
-          🎮 &nbsp;play the iOS app
-        </a>
-      </td>
-    </tr>
-    <tr>
-      <td>
         <a href="https://www.lexaloffle.com/bbs/?tid=39335">
           🎮 &nbsp;play it on the Lexaloffle BBS
         </a>
