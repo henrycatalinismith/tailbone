@@ -18,6 +18,11 @@ module.exports = function(eleventyConfig) {
         "./index.html",
         "./_site/index.html",
       )
+      fs.mkdirSync("./_site/disk2")
+      fs.copyFileSync(
+        "./disk2/index.html",
+        "./_site/disk2/index.html",
+      )
     }
   )
 }
