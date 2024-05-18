@@ -10,5 +10,6 @@
   "dependencies": {
     "@11ty/eleventy": "^2.0.1",
     "eleventy-plugin-pwa": "^1.0.8"
-  }
+  },
+  "packageManager": "yarn@4.0.0"
 }
