@@ -12,6 +12,13 @@ jobs:
       - uses: actions/setup-node@v4
 
       - run: yarn --pure=lockfile
+
+      - uses: actions/checkout@v4
+        with:
+          repository: henrycatalinismith/henrycatalinismith.github.io
+          sparse-checkout: tailbone
+          path: _site
+
       - run: yarn build
 
       - uses: peaceiris/actions-gh-pages@v3

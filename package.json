@@ -2,14 +2,18 @@
   "name": "@henrycatalinismith/tailbone",
   "version": "0.0.0",
   "description": "endless runner game",
+  "type": "module",
   "scripts": {
     "build": "eleventy",
     "start": "eleventy --serve"
   },
   "license": "MIT",
   "dependencies": {
-    "@11ty/eleventy": "^2.0.1",
-    "eleventy-plugin-pwa": "^1.0.8"
+    "@11ty/eleventy": "^3.0.0-alpha.17",
+    "@henrycatalinismith/theme": "file:../theme"
   },
-  "packageManager": "yarn@4.0.0"
+  "packageManager": "yarn@4.0.0",
+  "resolutions": {
+    "@henrycatalinismith/theme": "portal:/Users/henrycatalinismith/theme"
+  }
 }
