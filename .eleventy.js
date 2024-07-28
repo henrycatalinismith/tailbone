@@ -13,7 +13,7 @@ export default function(eleventyConfig) {
         "./tailbone.html",
         "./_site/tailbone.html",
       )
-      fs.mkdirSync("./_sitedisk2")
+      fs.mkdirSync("./_site/disk2")
       fs.copyFileSync(
         "./disk2/index.html",
         "./_site/disk2/index.html",
