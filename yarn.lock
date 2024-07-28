@@ -156,14 +156,7 @@ __metadata:
   resolution: "@henrycatalinismith/tailbone@workspace:."
   dependencies:
     "@11ty/eleventy": "npm:^3.0.0-alpha.17"
-    "@henrycatalinismith/theme": "file:../theme"
   languageName: unknown
-  linkType: soft
-
-"@henrycatalinismith/theme@portal:/Users/henrycatalinismith/theme::locator=%40henrycatalinismith%2Ftailbone%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@henrycatalinismith/theme@portal:/Users/henrycatalinismith/theme::locator=%40henrycatalinismith%2Ftailbone%40workspace%3A."
-  languageName: node
   linkType: soft
 
 "@isaacs/cliui@npm:^8.0.2":
