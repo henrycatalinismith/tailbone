@@ -9,10 +9,9 @@ export default function(eleventyConfig) {
   eleventyConfig.on(
     "afterBuild",
     function() {
-      fs.mkdirSync("./_site/play")
       fs.copyFileSync(
-        "./play/index.html",
-        "./_site/play/index.html",
+        "./index.html",
+        "./_site/index.html",
       )
       fs.mkdirSync("./_site/disk2")
       fs.copyFileSync(

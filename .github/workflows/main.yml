@@ -16,14 +16,6 @@ jobs:
 
       - run: yarn install
 
-      - uses: actions/checkout@v4
-        with:
-          repository: henrycatalinismith/henrycatalinismith.github.io
-          sparse-checkout: |
-            tailbone/index.html
-          path: _root
-
-      - run: mv _root/tailbone _site/
       - run: yarn build
 
       - uses: peaceiris/actions-gh-pages@v3
