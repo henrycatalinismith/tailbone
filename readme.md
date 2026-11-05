@@ -9,11 +9,11 @@ Skateboarding dinosaur game inspired by the Chrome offline page.
       <td rowspan="3">
         <img
           alt="Video of gameplay showing the dinosaur repeatedly jumping on cactuses and destroying them while dodging lava pits and meteors"
-          src="https://henry.catalinismith.com/tailbone/videos/demo-128x128.gif"
+          src="https://henry.catalinismith.se/tailbone/videos/demo-128x128.gif"
         />
       </td>
       <td>
-        <a href="https://henry.catalinismith.com/tailbone">
+        <a href="https://henry.catalinismith.se/tailbone">
           🎮 &nbsp;play the web version
         </a>
       </td>
