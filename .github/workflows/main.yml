@@ -29,6 +29,8 @@ jobs:
           mkdir site
           cp index.html privacy.html support.html site/
           cp disk2/index.html site/disk2.html
+          cp -R images site/images
+          cp icon-512x512.png site/icon-512x512.png
 
       - uses: actions/upload-pages-artifact@v3
         with:
