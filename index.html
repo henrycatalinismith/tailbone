@@ -131,6 +131,7 @@
         --bg: #162552;
         --buttonAnimation: progress;
         --buttonDisplay: none;
+        --badgeDisplay: none;
         --canvasDisplay: none;
         --canvasOpacity: 0;
         --iconDisplay: none;
@@ -144,6 +145,7 @@
       body[data-mode="menu"] {
         --bg: #162552;
         --buttonDisplay: flex;
+        --badgeDisplay: flex;
         --iconDisplay: flex;
         --creatorOpacity: 1;
       }
@@ -258,6 +260,15 @@
       button svg:nth-child(2) g {
         stroke-linecap: square;
         stroke-linejoin: round;
+      }
+
+      [itemprop="installUrl"] {
+        display: var(--badgeDisplay);
+      }
+
+      [itemprop="installUrl"] img {
+        height: 40px;
+        width: 135px;
       }
 
       [itemprop="creator"] {
@@ -467,6 +478,16 @@
         </g>
       </svg>
     </button>
+
+    <a
+      itemprop="installUrl"
+      href="https://apps.apple.com/app/id6831310889"
+      target="_blank">
+      <img
+        src="images/app-store-badge.svg"
+        alt="Download on the App Store"
+      />
+    </a>
 
     <div class="progress">
       <div class="segment"></div>
